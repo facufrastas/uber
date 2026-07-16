@@ -73,7 +73,7 @@ export function AppSidebar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        {isLocalDataSource ? (
+        {isLocalDataSource && (
           <Button
             variant="ghost"
             size="sm"
@@ -86,12 +86,11 @@ export function AppSidebar() {
             <RefreshCw />
             Restablecer datos de prueba
           </Button>
-        ) : (
-          <Button variant="ghost" size="sm" className="justify-start text-muted-foreground" onClick={clearSession}>
-            <LogOut />
-            Cerrar sesión
-          </Button>
         )}
+        <Button variant="ghost" size="sm" className="justify-start text-muted-foreground" onClick={clearSession}>
+          <LogOut />
+          Cerrar sesión
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
