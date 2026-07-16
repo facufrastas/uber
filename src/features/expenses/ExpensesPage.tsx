@@ -1,43 +1,33 @@
-import { useMemo, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Pencil, Plus, TrendingDown, Wrench } from 'lucide-react'
-import { toast } from 'sonner'
+import { useMemo, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Pencil, Plus, TrendingDown, Wrench } from 'lucide-react';
+import { toast } from 'sonner';
 
-import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { FilterBar } from '@/components/shared/FilterBar'
-import { PageHeader } from '@/components/layout/PageHeader'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { useFilteredData } from '@/hooks/useFilteredData'
-import { useDataStore } from '@/stores/dataStore'
-import { formatARS, formatDate } from '@/lib/format'
-import type { Expense } from '@/data/types'
-import { ExpenseDialog } from '@/features/expenses/ExpenseDialog'
+import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { FilterBar } from '@/components/shared/FilterBar';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useFilteredData } from '@/hooks/useFilteredData';
+import { useDataStore } from '@/stores/dataStore';
+import { formatARS, formatDate } from '@/lib/format';
+import type { Expense } from '@/data/types';
+import { ExpenseDialog } from '@/features/expenses/ExpenseDialog';
 
 export function ExpensesPage() {
-  const location = useLocation()
-  const { data, filtered } = useFilteredData()
-  const removeExpense = useDataStore((s) => s.removeExpense)
-  const [dialog, setDialog] = useState<{ open: boolean; expense?: Expense }>({ open: false })
+  const location = useLocation();
+  const { data, filtered } = useFilteredData();
+  const removeExpense = useDataStore((s) => s.removeExpense);
+  const [dialog, setDialog] = useState<{ open: boolean; expense?: Expense }>({ open: false });
 
-  const typeById = (id: string) => data.expenseTypes.find((t) => t.id === id)
-  const carById = (id: string | null) => data.cars.find((c) => c.id === id)
+  const typeById = (id: string) => data.expenseTypes.find((t) => t.id === id);
+  const carById = (id: string | null) => data.cars.find((c) => c.id === id);
 
-  const sortedExpenses = useMemo(
-    () => [...filtered.expenses].sort((a, b) => b.date.localeCompare(a.date)),
-    [filtered.expenses],
-  )
+  const sortedExpenses = useMemo(() => [...filtered.expenses].sort((a, b) => b.date.localeCompare(a.date)), [filtered.expenses]);
 
-  const total = filtered.expenses.reduce((sum, e) => sum + e.amount, 0)
+  const total = filtered.expenses.reduce((sum, e) => sum + e.amount, 0);
 
   return (
     <>
@@ -49,11 +39,7 @@ export function ExpensesPage() {
       <FilterBar />
 
       {sortedExpenses.length === 0 ? (
-        <EmptyState
-          icon={TrendingDown}
-          title="Sin gastos en el período"
-          description="Ajustá los filtros o registrá un gasto nuevo."
-        />
+        <EmptyState icon={TrendingDown} title="Sin gastos en el período" description="Ajustá los filtros o registrá un gasto nuevo." />
       ) : (
         <div className="overflow-x-auto rounded-lg border">
           <Table>
@@ -69,50 +55,40 @@ export function ExpensesPage() {
             </TableHeader>
             <TableBody>
               {sortedExpenses.map((expense) => {
-                const car = carById(expense.carId)
-                const isMaintenanceExpense = expense.maintenanceId !== null
+                const car = carById(expense.carId);
+                const isMaintenanceExpense = expense.maintenanceId !== null;
+
                 return (
                   <TableRow key={expense.id}>
                     <TableCell>{formatDate(expense.date)}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{typeById(expense.expenseTypeId)?.name ?? '—'}</Badge>
                     </TableCell>
-                    <TableCell>
-                      {car ? `${car.model} ${car.licensePlate}` : <span className="text-muted-foreground">General</span>}
-                    </TableCell>
+                    <TableCell>{car ? `${car.model} ${car.licensePlate}` : <span className="text-muted-foreground">General</span>}</TableCell>
                     <TableCell className="max-w-64 truncate text-muted-foreground">
                       {expense.description ?? '—'}
                       {isMaintenanceExpense && (
                         <Badge variant="outline" className="ml-2">
                           <Wrench />
-                          <Link to={{ pathname: '/maintenance', search: location.search }}>
-                            Mantenimiento
-                          </Link>
+                          <Link to={{ pathname: '/maintenance', search: location.search }}>Mantenimiento</Link>
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {formatARS(expense.amount)}
-                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{formatARS(expense.amount)}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
                         {/* maintenance expenses are edited/deleted from the Mantenimientos section */}
                         {!isMaintenanceExpense && (
                           <>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label="Editar"
-                              onClick={() => setDialog({ open: true, expense })}
-                            >
+                            <Button variant="ghost" size="icon-sm" aria-label="Editar" onClick={() => setDialog({ open: true, expense })}>
                               <Pencil />
                             </Button>
                             <ConfirmDeleteDialog
                               title="Eliminar gasto"
                               description="Esta acción no se puede deshacer."
                               onConfirm={async () => {
-                                await removeExpense(expense.id)
-                                toast.success('Gasto eliminado')
+                                await removeExpense(expense.id);
+                                toast.success('Gasto eliminado');
                               }}
                             />
                           </>
@@ -120,7 +96,7 @@ export function ExpensesPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                )
+                );
               })}
               <TableRow className="bg-muted/50 font-medium">
                 <TableCell colSpan={4}>Total ({sortedExpenses.length} gastos)</TableCell>
@@ -132,11 +108,7 @@ export function ExpensesPage() {
         </div>
       )}
 
-      <ExpenseDialog
-        open={dialog.open}
-        onOpenChange={(open) => setDialog((s) => ({ ...s, open }))}
-        expense={dialog.expense}
-      />
+      <ExpenseDialog open={dialog.open} onOpenChange={(open) => setDialog((s) => ({ ...s, open }))} expense={dialog.expense} />
     </>
-  )
+  );
 }

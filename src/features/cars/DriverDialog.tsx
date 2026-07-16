@@ -1,30 +1,18 @@
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Controller, useForm } from 'react-hook-form'
-import { toast } from 'sonner'
-import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller, useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { z } from 'zod';
 
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { useDataStore } from '@/stores/dataStore'
-import type { Driver } from '@/data/types'
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useDataStore } from '@/stores/dataStore';
+import type { Driver } from '@/data/types';
 
-const NO_CAR = '__no_car__'
+const NO_CAR = '__no_car__';
 
 const schema = z.object({
   name: z.string().min(1, 'Requerido'),
@@ -32,20 +20,20 @@ const schema = z.object({
   dni: z.string(),
   carId: z.string(), // NO_CAR = unassigned
   active: z.boolean(),
-})
+});
 
-type FormValues = z.infer<typeof schema>
+type FormValues = z.infer<typeof schema>;
 
 interface DriverDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  driver?: Driver
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  driver?: Driver;
 }
 
 export function DriverDialog({ open, onOpenChange, driver }: DriverDialogProps) {
-  const cars = useDataStore((s) => s.cars)
-  const addDriver = useDataStore((s) => s.addDriver)
-  const updateDriver = useDataStore((s) => s.updateDriver)
+  const cars = useDataStore((s) => s.cars);
+  const addDriver = useDataStore((s) => s.addDriver);
+  const updateDriver = useDataStore((s) => s.updateDriver);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -58,7 +46,7 @@ export function DriverDialog({ open, onOpenChange, driver }: DriverDialogProps) 
           active: driver.active,
         }
       : { name: '', phone: '', dni: '', carId: NO_CAR, active: true },
-  })
+  });
 
   const onSubmit = form.handleSubmit(async (values) => {
     const input = {
@@ -67,19 +55,20 @@ export function DriverDialog({ open, onOpenChange, driver }: DriverDialogProps) 
       dni: values.dni || null,
       carId: values.carId === NO_CAR ? null : values.carId,
       active: values.active,
-    }
-    if (driver) {
-      await updateDriver(driver.id, input)
-      toast.success('Chofer actualizado')
-    } else {
-      await addDriver(input)
-      toast.success('Chofer creado')
-    }
-    onOpenChange(false)
-    form.reset()
-  })
+    };
 
-  const { errors } = form.formState
+    if (driver) {
+      await updateDriver(driver.id, input);
+      toast.success('Chofer actualizado');
+    } else {
+      await addDriver(input);
+      toast.success('Chofer creado');
+    }
+    onOpenChange(false);
+    form.reset();
+  });
+
+  const { errors } = form.formState;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -127,11 +116,7 @@ export function DriverDialog({ open, onOpenChange, driver }: DriverDialogProps) 
               />
             </Field>
             <Field orientation="horizontal">
-              <Checkbox
-                id="driver-active"
-                checked={form.watch('active')}
-                onCheckedChange={(checked) => form.setValue('active', checked === true)}
-              />
+              <Checkbox id="driver-active" checked={form.watch('active')} onCheckedChange={(checked) => form.setValue('active', checked === true)} />
               <FieldLabel htmlFor="driver-active" className="font-normal">
                 Activo
               </FieldLabel>
@@ -148,5 +133,5 @@ export function DriverDialog({ open, onOpenChange, driver }: DriverDialogProps) 
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

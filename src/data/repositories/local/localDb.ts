@@ -1,15 +1,7 @@
-import { createStore } from 'zustand/vanilla'
-import { persist } from 'zustand/middleware'
+import { createStore } from 'zustand/vanilla';
+import { persist } from 'zustand/middleware';
 
-import type {
-  Car,
-  Driver,
-  Expense,
-  ExpenseType,
-  Maintenance,
-  Payment,
-  Shift,
-} from '@/data/types'
+import type { Car, Driver, Expense, ExpenseType, Maintenance, Payment, Shift } from '@/data/types';
 
 // This vanilla store (no React) IS the mock "database". Using Zustand +
 // persist gives us localStorage serialization and versioning (migrate) for
@@ -18,13 +10,13 @@ import type {
 // reads and writes.
 
 export interface DbState {
-  cars: Car[]
-  drivers: Driver[]
-  shifts: Shift[]
-  payments: Payment[]
-  maintenances: Maintenance[]
-  expenseTypes: ExpenseType[]
-  expenses: Expense[]
+  cars: Car[];
+  drivers: Driver[];
+  shifts: Shift[];
+  payments: Payment[];
+  maintenances: Maintenance[];
+  expenseTypes: ExpenseType[];
+  expenses: Expense[];
 }
 
 export const emptyDb: DbState = {
@@ -35,7 +27,7 @@ export const emptyDb: DbState = {
   maintenances: [],
   expenseTypes: [],
   expenses: [],
-}
+};
 
 // key renamed from 'flota-db' when the schema switched to English field
 // names: a new key means old Spanish-shaped data is simply ignored and the
@@ -44,5 +36,5 @@ export const localDb = createStore<DbState>()(
   persist(() => ({ ...emptyDb }), {
     name: 'uber-db',
     version: 1,
-  }),
-)
+  })
+);

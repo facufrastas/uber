@@ -1,13 +1,5 @@
-import type { DbState } from '@/data/repositories/local/localDb'
-import type {
-  Car,
-  Driver,
-  Expense,
-  ExpenseType,
-  Maintenance,
-  Payment,
-  Shift,
-} from '@/data/types'
+import type { DbState } from '@/data/repositories/local/localDb';
+import type { Car, Driver, Expense, ExpenseType, Maintenance, Payment, Shift } from '@/data/types';
 
 // DETERMINISTIC mock-data generator: same seed → same data. Charts look
 // identical after every "Restablecer datos de prueba" and any visual bug is
@@ -15,56 +7,48 @@ import type {
 
 // mulberry32 PRNG — good enough for mock data, seedable unlike Math.random()
 function mulberry32(seed: number) {
-  let a = seed
+  let a = seed;
+
   return () => {
-    a |= 0
-    a = (a + 0x6d2b79f5) | 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-const rng = mulberry32(20260714)
+const rng = mulberry32(20260714);
 
-const uuid = () => crypto.randomUUID()
-const pick = <T>(arr: T[]) => arr[Math.floor(rng() * arr.length)]
-const between = (min: number, max: number) => min + rng() * (max - min)
+const uuid = () => crypto.randomUUID();
+const pick = <T>(arr: T[]) => arr[Math.floor(rng() * arr.length)];
+const between = (min: number, max: number) => min + rng() * (max - min);
 // LOCAL formatting (not toISOString, which shifts the day depending on the timezone)
-const iso = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-const SEED_START = new Date(2026, 4, 15) // may 15, 2026
-const SEED_END = new Date(2026, 6, 14) // jul 14, 2026
+const SEED_START = new Date(2026, 4, 15); // may 15, 2026
+const SEED_END = new Date(2026, 6, 14); // jul 14, 2026
 
 // values stay in Spanish: they are displayed to the user
-export const EXPENSE_TYPE_NAMES = [
-  'Combustible',
-  'Mantenimiento',
-  'Seguro',
-  'Patente',
-  'Lavado',
-  'Multas',
-  'Peajes',
-  'Otros',
-] as const
+export const EXPENSE_TYPE_NAMES = ['Combustible', 'Mantenimiento', 'Seguro', 'Patente', 'Lavado', 'Multas', 'Peajes', 'Otros'] as const;
 
 export function buildSeed(): DbState {
-  const now = new Date().toISOString()
+  const now = new Date().toISOString();
 
   const expenseTypes: ExpenseType[] = EXPENSE_TYPE_NAMES.map((name) => ({
     id: uuid(),
     name,
     createdAt: now,
-  }))
-  const typeId = (name: (typeof EXPENSE_TYPE_NAMES)[number]) =>
-    expenseTypes.find((t) => t.name === name)!.id
+  }));
+  const typeId = (name: (typeof EXPENSE_TYPE_NAMES)[number]) => expenseTypes.find((t) => t.name === name)!.id;
 
   const cars: Car[] = [
     { brand: 'Toyota', model: 'Corolla', licensePlate: 'AF123BC', year: 2022, currentKm: 87500 },
     { brand: 'Chevrolet', model: 'Cruze', licensePlate: 'AD456GH', year: 2021, currentKm: 112300 },
     { brand: 'Fiat', model: 'Cronos', licensePlate: 'AG789JK', year: 2023, currentKm: 54200 },
-  ].map((c) => ({ ...c, id: uuid(), active: true, createdAt: now }))
+  ].map((c) => ({ ...c, id: uuid(), active: true, createdAt: now }));
 
   // 2 + 2 + 1: the Cronos keeps a single driver so the "missing second
   // driver" warning is visible in the UI.
@@ -74,33 +58,34 @@ export function buildSeed(): DbState {
     { name: 'Diego Sosa', phone: '351 555-0103', dni: '35678901', carId: cars[1].id },
     { name: 'Julián Paredes', phone: '351 555-0104', dni: '36789012', carId: cars[1].id },
     { name: 'Ramiro Aguirre', phone: '351 555-0105', dni: '37890123', carId: cars[2].id },
-  ].map((d) => ({ ...d, id: uuid(), active: true, createdAt: now }))
+  ].map((d) => ({ ...d, id: uuid(), active: true, createdAt: now }));
 
-  const driversOfCar = (carId: string) => drivers.filter((d) => d.carId === carId)
+  const driversOfCar = (carId: string) => drivers.filter((d) => d.carId === carId);
 
-  const shifts: Shift[] = []
-  const payments: Payment[] = []
-  const expenses: Expense[] = []
-  const maintenances: Maintenance[] = []
+  const shifts: Shift[] = [];
+  const payments: Payment[] = [];
+  const expenses: Expense[] = [];
+  const maintenances: Maintenance[] = [];
 
   for (let d = new Date(SEED_START); d <= SEED_END; d.setDate(d.getDate() + 1)) {
-    const date = iso(d)
-    const isWeekend = d.getDay() === 0 || d.getDay() === 6
+    const date = iso(d);
+    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
 
     for (const car of cars) {
       // ~10% of days with no activity per car
-      if (rng() < 0.1) continue
+      if (rng() < 0.1) continue;
 
-      const carDrivers = driversOfCar(car.id)
+      const carDrivers = driversOfCar(car.id);
       // morning shift and afternoon/evening shift
       const timeSlots = [
         { start: '06:00', end: '14:00' },
         { start: '14:00', end: '22:00' },
-      ]
+      ];
+
       timeSlots.forEach((slot, i) => {
         // cars with a single driver do one shift per day
-        if (i >= carDrivers.length && rng() < 0.7) return
-        const driver = carDrivers[i % carDrivers.length]
+        if (i >= carDrivers.length && rng() < 0.7) return;
+        const driver = carDrivers[i % carDrivers.length];
 
         const shift: Shift = {
           id: uuid(),
@@ -111,11 +96,13 @@ export function buildSeed(): DbState {
           endTime: slot.end,
           notes: null,
           createdAt: now,
-        }
-        shifts.push(shift)
+        };
 
-        const base = between(45000, 95000)
-        const amount = Math.round((isWeekend ? base * 1.25 : base) / 500) * 500
+        shifts.push(shift);
+
+        const base = between(45000, 95000);
+        const amount = Math.round((isWeekend ? base * 1.25 : base) / 500) * 500;
+
         payments.push({
           id: uuid(),
           shiftId: shift.id,
@@ -123,8 +110,8 @@ export function buildSeed(): DbState {
           paymentMethod: 'transferencia',
           notes: null,
           createdAt: now,
-        })
-      })
+        });
+      });
 
       // fuel roughly every other day
       if (rng() < 0.5) {
@@ -137,7 +124,7 @@ export function buildSeed(): DbState {
           date,
           description: 'Carga de combustible',
           createdAt: now,
-        })
+        });
       }
 
       // car wash ~weekly
@@ -151,7 +138,7 @@ export function buildSeed(): DbState {
           date,
           description: 'Lavado completo',
           createdAt: now,
-        })
+        });
       }
     }
 
@@ -167,7 +154,7 @@ export function buildSeed(): DbState {
           date,
           description: `Seguro mensual ${car.licensePlate}`,
           createdAt: now,
-        })
+        });
       }
     }
   }
@@ -183,7 +170,7 @@ export function buildSeed(): DbState {
       date: iso(new Date(2026, 5, Math.ceil(between(1, 28)))),
       description,
       createdAt: now,
-    })
+    });
   }
 
   // maintenances, each with its linked expense (type Mantenimiento)
@@ -193,10 +180,11 @@ export function buildSeed(): DbState {
     { serviceType: 'Pastillas de freno', cost: [90000, 140000] as const },
     { serviceType: 'Cambio de aceite y filtro', cost: [70000, 110000] as const },
     { serviceType: 'Alineación y balanceo', cost: [35000, 55000] as const },
-  ]
+  ];
+
   services.forEach((s, i) => {
-    const car = cars[i % cars.length]
-    const date = iso(new Date(2026, 4 + (i % 2), Math.ceil(between(2, 27))))
+    const car = cars[i % cars.length];
+    const date = iso(new Date(2026, 4 + (i % 2), Math.ceil(between(2, 27))));
     const maintenance: Maintenance = {
       id: uuid(),
       carId: car.id,
@@ -205,8 +193,9 @@ export function buildSeed(): DbState {
       date,
       notes: null,
       createdAt: now,
-    }
-    maintenances.push(maintenance)
+    };
+
+    maintenances.push(maintenance);
     expenses.push({
       id: uuid(),
       expenseTypeId: typeId('Mantenimiento'),
@@ -216,8 +205,8 @@ export function buildSeed(): DbState {
       date,
       description: s.serviceType,
       createdAt: now,
-    })
-  })
+    });
+  });
 
-  return { cars, drivers, shifts, payments, maintenances, expenseTypes, expenses }
+  return { cars, drivers, shifts, payments, maintenances, expenseTypes, expenses };
 }

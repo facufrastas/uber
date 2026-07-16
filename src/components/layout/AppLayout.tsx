@@ -1,22 +1,22 @@
-import { useEffect } from 'react'
-import { Outlet } from 'react-router-dom'
+import { useEffect } from 'react';
+import { Outlet } from 'react-router-dom';
 
-import { AppSidebar } from '@/components/layout/AppSidebar'
-import { Button } from '@/components/ui/button'
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { Separator } from '@/components/ui/separator'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Toaster } from '@/components/ui/sonner'
-import { useDataStore } from '@/stores/dataStore'
+import { AppSidebar } from '@/components/layout/AppSidebar';
+import { Button } from '@/components/ui/button';
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Toaster } from '@/components/ui/sonner';
+import { useDataStore } from '@/stores/dataStore';
 
 export function AppLayout() {
-  const status = useDataStore((s) => s.status)
-  const loadAll = useDataStore((s) => s.loadAll)
+  const status = useDataStore((s) => s.status);
+  const loadAll = useDataStore((s) => s.loadAll);
 
   // Boot: Seed if empty and load everything into memory
   useEffect(() => {
-    void loadAll()
-  }, [loadAll])
+    void loadAll();
+  }, [loadAll]);
 
   return (
     <SidebarProvider>
@@ -33,9 +33,7 @@ export function AppLayout() {
           ) : status === 'error' ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
               <p className="font-medium">No se pudieron cargar los datos</p>
-              <p className="text-sm text-muted-foreground">
-                Verificá que el servidor esté disponible e intentá de nuevo.
-              </p>
+              <p className="text-sm text-muted-foreground">Verificá que el servidor esté disponible e intentá de nuevo.</p>
               <Button variant="outline" size="sm" onClick={() => void loadAll()}>
                 Reintentar
               </Button>
@@ -51,5 +49,5 @@ export function AppLayout() {
       </SidebarInset>
       <Toaster richColors position="top-right" />
     </SidebarProvider>
-  )
+  );
 }

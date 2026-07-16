@@ -1,10 +1,10 @@
-import type { LucideIcon } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react';
 
 interface EmptyStateProps {
-  icon: LucideIcon
-  title: string
-  description?: string
-  children?: React.ReactNode
+  icon: LucideIcon;
+  title: string;
+  description?: string;
+  children?: React.ReactNode;
 }
 
 export function EmptyState({ icon: Icon, title, description, children }: EmptyStateProps) {
@@ -15,5 +15,5 @@ export function EmptyState({ icon: Icon, title, description, children }: EmptySt
       {description && <p className="max-w-sm text-sm text-muted-foreground">{description}</p>}
       {children}
     </div>
-  )
+  );
 }

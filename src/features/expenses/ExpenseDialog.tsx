@@ -1,31 +1,19 @@
-import { zodResolver } from '@hookform/resolvers/zod'
-import { format } from 'date-fns'
-import { Controller, useForm } from 'react-hook-form'
-import { toast } from 'sonner'
-import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from 'date-fns';
+import { Controller, useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { z } from 'zod';
 
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { useDataStore } from '@/stores/dataStore'
-import type { Expense } from '@/data/types'
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useDataStore } from '@/stores/dataStore';
+import type { Expense } from '@/data/types';
 
-const NO_CAR = '__no_car__'
+const NO_CAR = '__no_car__';
 
 const schema = z.object({
   expenseTypeId: z.string().min(1, 'Elegí un tipo'),
@@ -33,24 +21,24 @@ const schema = z.object({
   amount: z.number({ message: 'Ingresá un monto' }).positive('Debe ser mayor a 0'),
   date: z.string().min(1, 'Requerido'),
   description: z.string(),
-})
+});
 
-type FormValues = z.infer<typeof schema>
+type FormValues = z.infer<typeof schema>;
 
 interface ExpenseDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  expense?: Expense
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  expense?: Expense;
 }
 
 export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProps) {
-  const cars = useDataStore((s) => s.cars)
-  const expenseTypes = useDataStore((s) => s.expenseTypes)
-  const addExpense = useDataStore((s) => s.addExpense)
-  const updateExpense = useDataStore((s) => s.updateExpense)
+  const cars = useDataStore((s) => s.cars);
+  const expenseTypes = useDataStore((s) => s.expenseTypes);
+  const addExpense = useDataStore((s) => s.addExpense);
+  const updateExpense = useDataStore((s) => s.updateExpense);
 
   // local date, not UTC: toISOString() shifts the day in Argentina (UTC-3)
-  const today = format(new Date(), 'yyyy-MM-dd')
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -63,7 +51,7 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
           description: expense.description ?? '',
         }
       : { expenseTypeId: '', carId: NO_CAR, amount: 0, date: today, description: '' },
-  })
+  });
 
   const onSubmit = form.handleSubmit(async (values) => {
     const input = {
@@ -73,19 +61,20 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
       amount: values.amount,
       date: values.date,
       description: values.description || null,
-    }
-    if (expense) {
-      await updateExpense(expense.id, input)
-      toast.success('Gasto actualizado')
-    } else {
-      await addExpense(input)
-      toast.success('Gasto registrado')
-    }
-    onOpenChange(false)
-    form.reset()
-  })
+    };
 
-  const { errors } = form.formState
+    if (expense) {
+      await updateExpense(expense.id, input);
+      toast.success('Gasto actualizado');
+    } else {
+      await addExpense(input);
+      toast.success('Gasto registrado');
+    }
+    onOpenChange(false);
+    form.reset();
+  });
+
+  const { errors } = form.formState;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -169,5 +158,5 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

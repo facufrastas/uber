@@ -1,21 +1,15 @@
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
-import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { z } from 'zod';
 
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import { useDataStore } from '@/stores/dataStore'
-import type { Car } from '@/data/types'
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { useDataStore } from '@/stores/dataStore';
+import type { Car } from '@/data/types';
 
 const schema = z.object({
   brand: z.string().min(1, 'Requerido'),
@@ -24,19 +18,19 @@ const schema = z.object({
   year: z.number({ message: 'Ingresá un año' }).int().min(1990, 'Año inválido').max(2100, 'Año inválido'),
   currentKm: z.number({ message: 'Ingresá un número' }).int().min(0, 'No puede ser negativo'),
   active: z.boolean(),
-})
+});
 
-type FormValues = z.infer<typeof schema>
+type FormValues = z.infer<typeof schema>;
 
 interface CarDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  car?: Car // present = editing
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  car?: Car; // present = editing
 }
 
 export function CarDialog({ open, onOpenChange, car }: CarDialogProps) {
-  const addCar = useDataStore((s) => s.addCar)
-  const updateCar = useDataStore((s) => s.updateCar)
+  const addCar = useDataStore((s) => s.addCar);
+  const updateCar = useDataStore((s) => s.updateCar);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -57,22 +51,23 @@ export function CarDialog({ open, onOpenChange, car }: CarDialogProps) {
           currentKm: 0,
           active: true,
         },
-  })
+  });
 
   const onSubmit = form.handleSubmit(async (values) => {
-    const input = { ...values, licensePlate: values.licensePlate.toUpperCase() }
-    if (car) {
-      await updateCar(car.id, input)
-      toast.success('Auto actualizado')
-    } else {
-      await addCar(input)
-      toast.success('Auto creado')
-    }
-    onOpenChange(false)
-    form.reset()
-  })
+    const input = { ...values, licensePlate: values.licensePlate.toUpperCase() };
 
-  const { errors } = form.formState
+    if (car) {
+      await updateCar(car.id, input);
+      toast.success('Auto actualizado');
+    } else {
+      await addCar(input);
+      toast.success('Auto creado');
+    }
+    onOpenChange(false);
+    form.reset();
+  });
+
+  const { errors } = form.formState;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -112,11 +107,7 @@ export function CarDialog({ open, onOpenChange, car }: CarDialogProps) {
               {errors.currentKm && <FieldError>{errors.currentKm.message}</FieldError>}
             </Field>
             <Field orientation="horizontal">
-              <Checkbox
-                id="active"
-                checked={form.watch('active')}
-                onCheckedChange={(checked) => form.setValue('active', checked === true)}
-              />
+              <Checkbox id="active" checked={form.watch('active')} onCheckedChange={(checked) => form.setValue('active', checked === true)} />
               <FieldLabel htmlFor="active" className="font-normal">
                 Activo
               </FieldLabel>
@@ -133,5 +124,5 @@ export function CarDialog({ open, onOpenChange, car }: CarDialogProps) {
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

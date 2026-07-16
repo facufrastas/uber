@@ -1,30 +1,17 @@
-import { zodResolver } from '@hookform/resolvers/zod'
-import { format } from 'date-fns'
-import { Controller, useForm } from 'react-hook-form'
-import { toast } from 'sonner'
-import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from 'date-fns';
+import { Controller, useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { z } from 'zod';
 
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { useDataStore } from '@/stores/dataStore'
-import type { Expense, Maintenance } from '@/data/types'
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useDataStore } from '@/stores/dataStore';
+import type { Expense, Maintenance } from '@/data/types';
 
 const schema = z.object({
   carId: z.string().min(1, 'Elegí un auto'),
@@ -33,31 +20,26 @@ const schema = z.object({
   date: z.string().min(1, 'Requerido'),
   amount: z.number({ message: 'Ingresá un monto' }).positive('Debe ser mayor a 0'),
   notes: z.string(),
-})
+});
 
-type FormValues = z.infer<typeof schema>
+type FormValues = z.infer<typeof schema>;
 
 interface MaintenanceDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  maintenance?: Maintenance
-  expense?: Expense // linked expense (always exists for app-created maintenances)
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  maintenance?: Maintenance;
+  expense?: Expense; // linked expense (always exists for app-created maintenances)
 }
 
-export function MaintenanceDialog({
-  open,
-  onOpenChange,
-  maintenance,
-  expense,
-}: MaintenanceDialogProps) {
-  const cars = useDataStore((s) => s.cars)
-  const expenseTypes = useDataStore((s) => s.expenseTypes)
-  const addMaintenanceWithExpense = useDataStore((s) => s.addMaintenanceWithExpense)
-  const updateMaintenance = useDataStore((s) => s.updateMaintenance)
-  const updateExpense = useDataStore((s) => s.updateExpense)
+export function MaintenanceDialog({ open, onOpenChange, maintenance, expense }: MaintenanceDialogProps) {
+  const cars = useDataStore((s) => s.cars);
+  const expenseTypes = useDataStore((s) => s.expenseTypes);
+  const addMaintenanceWithExpense = useDataStore((s) => s.addMaintenanceWithExpense);
+  const updateMaintenance = useDataStore((s) => s.updateMaintenance);
+  const updateExpense = useDataStore((s) => s.updateExpense);
 
   // local date, not UTC: toISOString() shifts the day in Argentina (UTC-3)
-  const today = format(new Date(), 'yyyy-MM-dd')
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -71,10 +53,9 @@ export function MaintenanceDialog({
           notes: maintenance.notes ?? '',
         }
       : { carId: '', serviceType: '', km: 0, date: today, amount: 0, notes: '' },
-  })
+  });
 
-  const maintenanceTypeId = () =>
-    expenseTypes.find((t) => t.name === 'Mantenimiento')?.id ?? expenseTypes[0]?.id ?? ''
+  const maintenanceTypeId = () => expenseTypes.find((t) => t.name === 'Mantenimiento')?.id ?? expenseTypes[0]?.id ?? '';
 
   const onSubmit = form.handleSubmit(async (values) => {
     const maintenanceInput = {
@@ -83,9 +64,10 @@ export function MaintenanceDialog({
       km: values.km || null,
       date: values.date,
       notes: values.notes || null,
-    }
+    };
+
     if (maintenance) {
-      await updateMaintenance(maintenance.id, maintenanceInput)
+      await updateMaintenance(maintenance.id, maintenanceInput);
       // keep the linked expense in sync (amount, date, car)
       if (expense) {
         await updateExpense(expense.id, {
@@ -93,31 +75,29 @@ export function MaintenanceDialog({
           date: values.date,
           carId: values.carId,
           description: values.serviceType,
-        })
+        });
       }
-      toast.success('Mantenimiento actualizado')
+      toast.success('Mantenimiento actualizado');
     } else {
       await addMaintenanceWithExpense(maintenanceInput, {
         expenseTypeId: maintenanceTypeId(),
         amount: values.amount,
         description: values.serviceType,
-      })
-      toast.success('Mantenimiento registrado (gasto creado automáticamente)')
+      });
+      toast.success('Mantenimiento registrado (gasto creado automáticamente)');
     }
-    onOpenChange(false)
-    form.reset()
-  })
+    onOpenChange(false);
+    form.reset();
+  });
 
-  const { errors } = form.formState
+  const { errors } = form.formState;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{maintenance ? 'Editar mantenimiento' : 'Nuevo mantenimiento'}</DialogTitle>
-          <DialogDescription>
-            El costo se registra automáticamente como gasto de tipo Mantenimiento.
-          </DialogDescription>
+          <DialogDescription>El costo se registra automáticamente como gasto de tipo Mantenimiento.</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit}>
           <FieldGroup className="gap-4">
@@ -152,11 +132,7 @@ export function MaintenanceDialog({
             </div>
             <Field>
               <FieldLabel htmlFor="serviceType">Servicio</FieldLabel>
-              <Input
-                id="serviceType"
-                placeholder="Cambio de aceite y filtro"
-                {...form.register('serviceType')}
-              />
+              <Input id="serviceType" placeholder="Cambio de aceite y filtro" {...form.register('serviceType')} />
               {errors.serviceType && <FieldError>{errors.serviceType.message}</FieldError>}
             </Field>
             <div className="grid grid-cols-2 gap-4">
@@ -187,5 +163,5 @@ export function MaintenanceDialog({
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

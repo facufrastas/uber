@@ -1,7 +1,7 @@
 interface PageHeaderProps {
-  title: string
-  description?: string
-  children?: React.ReactNode // Primary action (e.g. "Nuevo…" button)
+  title: string;
+  description?: string;
+  children?: React.ReactNode; // Primary action (e.g. "Nuevo…" button)
 }
 
 export function PageHeader({ title, description, children }: PageHeaderProps) {
@@ -13,5 +13,5 @@ export function PageHeader({ title, description, children }: PageHeaderProps) {
       </div>
       {children}
     </div>
-  )
+  );
 }

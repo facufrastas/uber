@@ -1,28 +1,16 @@
-import { zodResolver } from '@hookform/resolvers/zod'
-import { format } from 'date-fns'
-import { Controller, useForm } from 'react-hook-form'
-import { toast } from 'sonner'
-import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from 'date-fns';
+import { Controller, useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { z } from 'zod';
 
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { useDataStore } from '@/stores/dataStore'
-import { PAYMENT_METHODS, type Payment, type PaymentMethod, type Shift } from '@/data/types'
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useDataStore } from '@/stores/dataStore';
+import { PAYMENT_METHODS, type Payment, type PaymentMethod, type Shift } from '@/data/types';
 
 const schema = z.object({
   driverId: z.string().min(1, 'Elegí un chofer'),
@@ -32,32 +20,32 @@ const schema = z.object({
   endTime: z.string(),
   amount: z.number({ message: 'Ingresá un monto' }).min(0, 'No puede ser negativo'),
   paymentMethod: z.enum(PAYMENT_METHODS),
-})
+});
 
-type FormValues = z.infer<typeof schema>
+type FormValues = z.infer<typeof schema>;
 
 const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   transferencia: 'Transferencia',
   efectivo: 'Efectivo',
   otro: 'Otro',
-}
+};
 
 interface ShiftDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  shift?: Shift
-  payment?: Payment
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  shift?: Shift;
+  payment?: Payment;
 }
 
 export function ShiftDialog({ open, onOpenChange, shift, payment }: ShiftDialogProps) {
-  const cars = useDataStore((s) => s.cars)
-  const drivers = useDataStore((s) => s.drivers)
-  const addShiftWithPayment = useDataStore((s) => s.addShiftWithPayment)
-  const updateShift = useDataStore((s) => s.updateShift)
-  const updatePayment = useDataStore((s) => s.updatePayment)
+  const cars = useDataStore((s) => s.cars);
+  const drivers = useDataStore((s) => s.drivers);
+  const addShiftWithPayment = useDataStore((s) => s.addShiftWithPayment);
+  const updateShift = useDataStore((s) => s.updateShift);
+  const updatePayment = useDataStore((s) => s.updatePayment);
 
   // local date, not UTC: toISOString() shifts the day in Argentina (UTC-3)
-  const today = format(new Date(), 'yyyy-MM-dd')
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -80,14 +68,15 @@ export function ShiftDialog({ open, onOpenChange, shift, payment }: ShiftDialogP
           amount: 0,
           paymentMethod: 'transferencia',
         },
-  })
+  });
 
   // when choosing a driver, preselect their assigned car
   const onDriverChange = (driverId: string) => {
-    form.setValue('driverId', driverId)
-    const driver = drivers.find((d) => d.id === driverId)
-    if (driver?.carId && !shift) form.setValue('carId', driver.carId)
-  }
+    form.setValue('driverId', driverId);
+    const driver = drivers.find((d) => d.id === driverId);
+
+    if (driver?.carId && !shift) form.setValue('carId', driver.carId);
+  };
 
   const onSubmit = form.handleSubmit(async (values) => {
     const shiftInput = {
@@ -97,29 +86,30 @@ export function ShiftDialog({ open, onOpenChange, shift, payment }: ShiftDialogP
       startTime: values.startTime || null,
       endTime: values.endTime || null,
       notes: shift?.notes ?? null,
-    }
+    };
+
     if (shift) {
-      await updateShift(shift.id, shiftInput)
+      await updateShift(shift.id, shiftInput);
       if (payment) {
         await updatePayment(payment.id, {
           amount: values.amount,
           paymentMethod: values.paymentMethod,
-        })
+        });
       }
-      toast.success('Turno actualizado')
+      toast.success('Turno actualizado');
     } else {
       await addShiftWithPayment(shiftInput, {
         amount: values.amount,
         paymentMethod: values.paymentMethod,
         notes: null,
-      })
-      toast.success('Turno y pago registrados')
+      });
+      toast.success('Turno y pago registrados');
     }
-    onOpenChange(false)
-    form.reset()
-  })
+    onOpenChange(false);
+    form.reset();
+  });
 
-  const { errors } = form.formState
+  const { errors } = form.formState;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -234,5 +224,5 @@ export function ShiftDialog({ open, onOpenChange, shift, payment }: ShiftDialogP
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

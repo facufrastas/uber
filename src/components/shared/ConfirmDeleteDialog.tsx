@@ -1,3 +1,5 @@
+import { Trash2 } from 'lucide-react';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -8,14 +10,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
-import { Trash2 } from 'lucide-react'
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 interface ConfirmDeleteDialogProps {
-  title: string
-  description: string
-  onConfirm: () => void | Promise<void>
+  title: string;
+  description: string;
+  onConfirm: () => void | Promise<void>;
 }
 
 export function ConfirmDeleteDialog({ title, description, onConfirm }: ConfirmDeleteDialogProps) {
@@ -39,5 +40,5 @@ export function ConfirmDeleteDialog({ title, description, onConfirm }: ConfirmDe
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
+  );
 }
