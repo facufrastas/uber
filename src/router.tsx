@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RequireAuth } from '@/features/auth/RequireAuth';
+import { CarDetailPage } from '@/features/cars/CarDetailPage';
 import { CarsPage } from '@/features/cars/CarsPage';
 import { ExpensesPage } from '@/features/expenses/ExpensesPage';
 import { HomePage } from '@/features/home/HomePage';
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
       { path: '/income', element: <IncomePage /> },
       { path: '/expenses', element: <ExpensesPage /> },
       { path: '/cars', element: <CarsPage /> },
+      { path: '/cars/:id', element: <CarDetailPage /> },
       { path: '/maintenance', element: <MaintenancePage /> },
     ],
   },

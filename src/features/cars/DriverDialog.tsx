@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -8,17 +8,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDataStore } from '@/stores/dataStore';
 import type { Driver } from '@/data/types';
-
-const NO_CAR = '__no_car__';
 
 const schema = z.object({
   name: z.string().min(1, 'Requerido'),
   phone: z.string(),
   dni: z.string(),
-  carId: z.string(), // NO_CAR = unassigned
+  carIds: z.array(z.string()), // empty = unassigned
   active: z.boolean(),
 });
 
@@ -32,8 +29,11 @@ interface DriverDialogProps {
 
 export function DriverDialog({ open, onOpenChange, driver }: DriverDialogProps) {
   const cars = useDataStore((s) => s.cars);
+  const driverCars = useDataStore((s) => s.driverCars);
   const addDriver = useDataStore((s) => s.addDriver);
   const updateDriver = useDataStore((s) => s.updateDriver);
+
+  const assignedCarIds = driver ? driverCars.filter((dc) => dc.driverId === driver.id).map((dc) => dc.carId) : [];
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -42,26 +42,33 @@ export function DriverDialog({ open, onOpenChange, driver }: DriverDialogProps) 
           name: driver.name,
           phone: driver.phone ?? '',
           dni: driver.dni ?? '',
-          carId: driver.carId ?? NO_CAR,
+          carIds: assignedCarIds,
           active: driver.active,
         }
-      : { name: '', phone: '', dni: '', carId: NO_CAR, active: true },
+      : { name: '', phone: '', dni: '', carIds: [], active: true },
   });
+
+  const selectedCarIds = form.watch('carIds');
+
+  const toggleCar = (carId: string, checked: boolean) => {
+    const next = checked ? [...selectedCarIds, carId] : selectedCarIds.filter((id) => id !== carId);
+
+    form.setValue('carIds', next, { shouldDirty: true });
+  };
 
   const onSubmit = form.handleSubmit(async (values) => {
     const input = {
       name: values.name,
       phone: values.phone || null,
       dni: values.dni || null,
-      carId: values.carId === NO_CAR ? null : values.carId,
       active: values.active,
     };
 
     if (driver) {
-      await updateDriver(driver.id, input);
+      await updateDriver(driver.id, input, values.carIds);
       toast.success('Chofer actualizado');
     } else {
-      await addDriver(input);
+      await addDriver(input, values.carIds);
       toast.success('Chofer creado');
     }
     onOpenChange(false);
@@ -94,26 +101,21 @@ export function DriverDialog({ open, onOpenChange, driver }: DriverDialogProps) 
               </Field>
             </div>
             <Field>
-              <FieldLabel>Auto asignado</FieldLabel>
-              <Controller
-                control={form.control}
-                name="carId"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NO_CAR}>Sin asignar</SelectItem>
-                      {cars.map((car) => (
-                        <SelectItem key={car.id} value={car.id}>
-                          {car.model} {car.licensePlate}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+              <FieldLabel>Autos asignados</FieldLabel>
+              {cars.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Todavía no hay autos cargados.</p>
+              ) : (
+                <div className="space-y-2 rounded-md border p-3">
+                  {cars.map((car) => (
+                    <div key={car.id} className="flex items-center gap-2">
+                      <Checkbox id={`car-${car.id}`} checked={selectedCarIds.includes(car.id)} onCheckedChange={(checked) => toggleCar(car.id, checked === true)} />
+                      <FieldLabel htmlFor={`car-${car.id}`} className="font-normal">
+                        {car.model} <span className="font-mono text-xs text-muted-foreground">{car.licensePlate}</span>
+                      </FieldLabel>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Field>
             <Field orientation="horizontal">
               <Checkbox id="driver-active" checked={form.watch('active')} onCheckedChange={(checked) => form.setValue('active', checked === true)} />

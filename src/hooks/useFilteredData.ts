@@ -9,13 +9,19 @@ import { useFilters } from '@/hooks/useFilters';
 export function useFilteredData() {
   const cars = useDataStore((s) => s.cars);
   const drivers = useDataStore((s) => s.drivers);
+  const owners = useDataStore((s) => s.owners);
+  const driverCars = useDataStore((s) => s.driverCars);
+  const carOwners = useDataStore((s) => s.carOwners);
   const shifts = useDataStore((s) => s.shifts);
   const payments = useDataStore((s) => s.payments);
   const expenses = useDataStore((s) => s.expenses);
   const expenseTypes = useDataStore((s) => s.expenseTypes);
   const { filters } = useFilters();
 
-  const data: DataSlice = useMemo(() => ({ cars, drivers, shifts, payments, expenses, expenseTypes }), [cars, drivers, shifts, payments, expenses, expenseTypes]);
+  const data: DataSlice = useMemo(
+    () => ({ cars, drivers, owners, driverCars, carOwners, shifts, payments, expenses, expenseTypes }),
+    [cars, drivers, owners, driverCars, carOwners, shifts, payments, expenses, expenseTypes]
+  );
 
   const filtered = useMemo(() => applyFilters(data, filters), [data, filters]);
 

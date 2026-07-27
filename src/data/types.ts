@@ -9,16 +9,46 @@ export interface Car {
   year: number | null;
   currentKm: number;
   active: boolean;
+  // purchaseCost is in USD while every income/expense is in ARS: the payoff
+  // progress converts with the current "dólar oficial" rate. Both null means
+  // the car has no purchase data loaded and the payoff bar is hidden.
+  purchaseCost: number | null;
+  purchaseDate: string | null;
   createdAt: string;
 }
 
 export interface Driver {
   id: string;
-  carId: string | null;
   name: string;
   phone: string | null;
   dni: string | null;
   active: boolean;
+  createdAt: string;
+}
+
+export interface Owner {
+  id: string;
+  name: string;
+  phone: string | null;
+  notes: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+// Junction rows. They carry their own id so they go through the same generic
+// repository as every other entity (both data sources and the API).
+export interface DriverCar {
+  id: string;
+  driverId: string;
+  carId: string;
+  createdAt: string;
+}
+
+export interface CarOwner {
+  id: string;
+  carId: string;
+  ownerId: string;
+  percentage: number; // 0 < percentage <= 100; per car they must add up to 100
   createdAt: string;
 }
 
@@ -77,6 +107,9 @@ export interface Expense {
 // Creation DTOs: the repository generates id and createdAt.
 export type CarCreate = Omit<Car, 'id' | 'createdAt'>;
 export type DriverCreate = Omit<Driver, 'id' | 'createdAt'>;
+export type OwnerCreate = Omit<Owner, 'id' | 'createdAt'>;
+export type DriverCarCreate = Omit<DriverCar, 'id' | 'createdAt'>;
+export type CarOwnerCreate = Omit<CarOwner, 'id' | 'createdAt'>;
 export type ShiftCreate = Omit<Shift, 'id' | 'createdAt'>;
 export type PaymentCreate = Omit<Payment, 'id' | 'createdAt'>;
 export type MaintenanceCreate = Omit<Maintenance, 'id' | 'createdAt'>;

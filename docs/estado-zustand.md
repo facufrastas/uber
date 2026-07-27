@@ -1,4 +1,4 @@
-# Estado con Zustand: tres stores, tres trabajos distintos
+# Estado con Zustand: cuatro stores, cuatro trabajos distintos
 
 ## El mapa
 
@@ -7,6 +7,7 @@
 | `useAuthStore` (`stores/authStore.ts`) | hook React | ✅ localStorage `uber-auth` | Tokens JWT de la sesión |
 | `localDb` (`data/repositories/local/localDb.ts`) | vanilla (`zustand/vanilla`) | ✅ localStorage `uber-db` | **Es la base de datos mock** (solo modo local) |
 | `useDataStore` (`stores/dataStore.ts`) | hook React | ❌ | Cache en memoria + acciones |
+| `useExchangeRateStore` (`stores/exchangeRateStore.ts`) | hook React | ❌ | Cotización del dólar oficial, un fetch por sesión |
 
 (El tema claro/oscuro no usa Zustand: es un Context minúsculo en
 `components/theme-provider.tsx` con su propia clave de localStorage.)
@@ -17,7 +18,10 @@
 middleware `persist` y obtenemos gratis:
 
 - serialización automática a localStorage,
-- `version: 1` + `migrate` para cuando cambie la forma de los datos,
+- `version` + `migrate` para cuando cambie la forma de los datos — la v2
+  (dueños y las tablas puente) migra **descartando**: los datos v1 no tienen
+  filas de `driver_cars`, así que rehidratarlos mostraría una flota sin nadie
+  asignado. Arrancar vacío hace que `seedIfEmpty()` reconstruya todo,
 - una API síncrona (`getState`/`setState`) que el repositorio local usa como
   si fuera un motor de base de datos en miniatura.
 
@@ -33,7 +37,16 @@ que responde FresaStuff-API. La regla:
 la colección tocada del DataSource. El repositorio es la fuente de verdad; el
 store solo refleja.
 
-## ¿Por qué UN dataStore y no siete (uno por entidad)?
+## ¿Por qué la cotización tiene su propio store?
+
+`useExchangeRateStore` guarda el dólar oficial (DolarAPI) para convertir el
+costo en USD de un auto contra sus ganancias en ARS. No va en `useDataStore`
+porque **no es dato del dominio**: no se guarda en la base, no se edita, no
+viaja en un link. Es presentación, y se busca una sola vez por sesión. Si el
+fetch falla, la tarjeta de recupero deja escribir la cotización a mano y el
+store la marca como manual para no pisarla en el próximo montaje.
+
+## ¿Por qué UN dataStore y no diez (uno por entidad)?
 
 El dominio es chico y está muy interconectado: "ingresos por auto" necesita
 turnos + pagos + autos a la vez. Con un solo snapshot, los selectores de

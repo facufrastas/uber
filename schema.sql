@@ -3,7 +3,8 @@
 -- ============================================================================
 -- Run this whole file in the Supabase SQL Editor.
 -- Creation order respects FK dependencies:
---   cars → drivers → shifts → payments → maintenances → expense_types → expenses
+--   cars → owners → car_owners → drivers → driver_cars → shifts → payments
+--   → maintenances → expense_types → expenses
 --
 -- Decisions:
 --   * uuid PKs with DEFAULT gen_random_uuid(): native in Postgres 13+ (no
@@ -18,6 +19,9 @@
 
 -- ----------------------------------------------------------------------------
 -- CARS
+-- purchase_cost is in USD (earnings are ARS; the app converts with the
+-- current "dólar oficial" rate). Both purchase columns nullable: without
+-- them the app hides the payoff progress bar.
 -- ----------------------------------------------------------------------------
 create table cars (
   id             uuid primary key default gen_random_uuid(),
@@ -27,18 +31,54 @@ create table cars (
   year           integer check (year >= 1990),
   current_km     integer not null default 0 check (current_km >= 0),
   active         boolean not null default true,
+  purchase_cost  numeric(12,2) check (purchase_cost >= 0),
+  purchase_date  date,
   created_at     timestamptz not null default now()
 );
 
 -- ----------------------------------------------------------------------------
+-- OWNERS
+-- People who own the cars. A car can belong to several owners with a
+-- percentage split (see car_owners).
+-- ----------------------------------------------------------------------------
+create table owners (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null,
+  phone       text,
+  notes       text,
+  active      boolean not null default true,
+  created_at  timestamptz not null default now()
+);
+
+-- ----------------------------------------------------------------------------
+-- CAR_OWNERS
+-- car <-> owner many-to-many with ownership percentage. The CHECK only
+-- bounds each row (0 < pct <= 100); "percentages of a car sum to 100" is
+-- enforced in the application (a CHECK cannot aggregate rows).
+-- Rows carry their own uuid id so they go through the same generic CRUD as
+-- every other table. ON DELETE CASCADE both ways: deleting either side just
+-- removes the relation.
+-- ----------------------------------------------------------------------------
+create table car_owners (
+  id          uuid primary key default gen_random_uuid(),
+  car_id      uuid not null references cars (id) on delete cascade,
+  owner_id    uuid not null references owners (id) on delete cascade,
+  percentage  numeric(5,2) not null check (percentage > 0 and percentage <= 100),
+  created_at  timestamptz not null default now(),
+  unique (car_id, owner_id)
+);
+
+create index car_owners_car_id_idx   on car_owners (car_id);
+create index car_owners_owner_id_idx on car_owners (owner_id);
+
+-- ----------------------------------------------------------------------------
 -- DRIVERS
--- car_id nullable: a driver can be temporarily unassigned.
--- The "1 to 2 drivers per car" business rule is enforced in the application,
--- not in DDL (a CHECK cannot count rows of another table).
+-- Car assignment lives in driver_cars (many-to-many). The "1 to 2 drivers
+-- per car" business rule is enforced in the application, not in DDL (a CHECK
+-- cannot count rows of another table).
 -- ----------------------------------------------------------------------------
 create table drivers (
   id          uuid primary key default gen_random_uuid(),
-  car_id      uuid references cars (id) on delete set null,
   name        text not null,
   phone       text,
   dni         text unique,
@@ -46,7 +86,21 @@ create table drivers (
   created_at  timestamptz not null default now()
 );
 
-create index drivers_car_id_idx on drivers (car_id);
+-- ----------------------------------------------------------------------------
+-- DRIVER_CARS
+-- driver <-> car assignment, many-to-many: a driver can be assigned to
+-- several cars. Same junction conventions as car_owners.
+-- ----------------------------------------------------------------------------
+create table driver_cars (
+  id          uuid primary key default gen_random_uuid(),
+  driver_id   uuid not null references drivers (id) on delete cascade,
+  car_id      uuid not null references cars (id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  unique (driver_id, car_id)
+);
+
+create index driver_cars_driver_id_idx on driver_cars (driver_id);
+create index driver_cars_car_id_idx    on driver_cars (car_id);
 
 -- ----------------------------------------------------------------------------
 -- SHIFTS
@@ -157,7 +211,10 @@ create index expenses_expense_type_id_idx on expenses (expense_type_id);
 -- explicit policies here.
 -- ============================================================================
 alter table cars           enable row level security;
+alter table owners         enable row level security;
+alter table car_owners     enable row level security;
 alter table drivers        enable row level security;
+alter table driver_cars    enable row level security;
 alter table shifts         enable row level security;
 alter table payments       enable row level security;
 alter table maintenances   enable row level security;

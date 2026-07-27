@@ -1,4 +1,24 @@
-import type { Car, CarCreate, Driver, DriverCreate, Expense, ExpenseCreate, ExpenseType, Maintenance, MaintenanceCreate, Payment, PaymentCreate, Shift, ShiftCreate } from '@/data/types';
+import type {
+  Car,
+  CarCreate,
+  CarOwner,
+  CarOwnerCreate,
+  Driver,
+  DriverCar,
+  DriverCarCreate,
+  DriverCreate,
+  Expense,
+  ExpenseCreate,
+  ExpenseType,
+  Maintenance,
+  MaintenanceCreate,
+  Owner,
+  OwnerCreate,
+  Payment,
+  PaymentCreate,
+  Shift,
+  ShiftCreate,
+} from '@/data/types';
 
 // Generic data-access contract. The same interface is implemented by
 // apiDataSource (FresaStuff-API, the default) and localDataSource
@@ -25,11 +45,17 @@ export interface MaintenanceRepository extends Repository<Maintenance, Maintenan
 export interface DataSource {
   cars: Repository<Car, CarCreate>;
   drivers: Repository<Driver, DriverCreate>;
+  owners: Repository<Owner, OwnerCreate>;
   shifts: ShiftRepository;
   payments: Repository<Payment, PaymentCreate>;
   maintenances: MaintenanceRepository;
   expenseTypes: Pick<Repository<ExpenseType, never>, 'list'>;
   expenses: Repository<Expense, ExpenseCreate>;
+  // Junctions are plain CRUD: replacing an assignment set is a diff of
+  // creates/removes done once in the data store, so it works the same against
+  // both data sources without bespoke endpoints.
+  driverCars: Repository<DriverCar, DriverCarCreate>;
+  carOwners: Repository<CarOwner, CarOwnerCreate>;
   seedIfEmpty(): Promise<void>;
   resetSeed(): Promise<void>;
 }

@@ -24,10 +24,17 @@ const PRESETS = [
 
 const ALL = '__all__'; // Radix Select does not allow value=""
 
-export function FilterBar() {
-  const { filters, setPreset, setCustomRange, setCarId, setDriverId, reset } = useFilters();
+interface FilterBarProps {
+  // false on screens already scoped to one entity (the car detail page),
+  // where a car/driver/owner picker would contradict the page
+  entityFilters?: boolean;
+}
+
+export function FilterBar({ entityFilters = true }: FilterBarProps = {}) {
+  const { filters, setPreset, setCustomRange, setCarId, setDriverId, setOwnerId, reset } = useFilters();
   const cars = useDataStore((s) => s.cars);
   const drivers = useDataStore((s) => s.drivers);
+  const owners = useDataStore((s) => s.owners);
   const [driverOpen, setDriverOpen] = useState(false);
 
   const selectedDriver = drivers.find((d) => d.id === filters.driverId);
@@ -37,7 +44,7 @@ export function FilterBar() {
     to: new Date(`${filters.range.to}T00:00:00`),
   };
 
-  const hasActiveFilters = filters.preset !== 'month' || filters.carId !== null || filters.driverId !== null;
+  const hasActiveFilters = filters.preset !== 'month' || filters.carId !== null || filters.driverId !== null || filters.ownerId !== null;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -78,63 +85,83 @@ export function FilterBar() {
         </PopoverContent>
       </Popover>
 
-      <Select value={filters.carId ?? ALL} onValueChange={(v) => setCarId(v === ALL ? null : v)}>
-        <SelectTrigger size="sm" className="w-[150px]">
-          <SelectValue placeholder="Auto" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL}>Todos los autos</SelectItem>
-          {cars.map((car) => (
-            <SelectItem key={car.id} value={car.id}>
-              {car.model} {car.licensePlate}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {entityFilters && (
+        <Select value={filters.carId ?? ALL} onValueChange={(v) => setCarId(v === ALL ? null : v)}>
+          <SelectTrigger size="sm" className="w-[150px]">
+            <SelectValue placeholder="Auto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Todos los autos</SelectItem>
+            {cars.map((car) => (
+              <SelectItem key={car.id} value={car.id}>
+                {car.model} {car.licensePlate}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      {entityFilters && (
+        <Select value={filters.ownerId ?? ALL} onValueChange={(v) => setOwnerId(v === ALL ? null : v)}>
+          <SelectTrigger size="sm" className="w-[160px]">
+            <SelectValue placeholder="Dueño" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Todos los dueños</SelectItem>
+            {owners.map((owner) => (
+              <SelectItem key={owner.id} value={owner.id}>
+                {owner.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       {/* combobox with search: with many drivers, typing beats scrolling */}
-      <Popover open={driverOpen} onOpenChange={setDriverOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" role="combobox" aria-expanded={driverOpen} className="h-8 w-[180px] justify-between font-normal">
-            <span className="truncate">{selectedDriver?.name ?? 'Todos los choferes'}</span>
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[220px] p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Buscar chofer…" />
-            <CommandList>
-              <CommandEmpty>Sin resultados.</CommandEmpty>
-              <CommandGroup>
-                <CommandItem
-                  value={ALL}
-                  onSelect={() => {
-                    setDriverId(null);
-                    setDriverOpen(false);
-                  }}
-                >
-                  <Check className={cn('size-4', filters.driverId !== null && 'invisible')} />
-                  Todos los choferes
-                </CommandItem>
-                {drivers.map((driver) => (
+      {entityFilters && (
+        <Popover open={driverOpen} onOpenChange={setDriverOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" role="combobox" aria-expanded={driverOpen} className="h-8 w-[180px] justify-between font-normal">
+              <span className="truncate">{selectedDriver?.name ?? 'Todos los choferes'}</span>
+              <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[220px] p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Buscar chofer…" />
+              <CommandList>
+                <CommandEmpty>Sin resultados.</CommandEmpty>
+                <CommandGroup>
                   <CommandItem
-                    key={driver.id}
-                    // search matches by name; the id keeps duplicates distinct
-                    value={`${driver.name} ${driver.id}`}
+                    value={ALL}
                     onSelect={() => {
-                      setDriverId(driver.id);
+                      setDriverId(null);
                       setDriverOpen(false);
                     }}
                   >
-                    <Check className={cn('size-4', filters.driverId !== driver.id && 'invisible')} />
-                    {driver.name}
+                    <Check className={cn('size-4', filters.driverId !== null && 'invisible')} />
+                    Todos los choferes
                   </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+                  {drivers.map((driver) => (
+                    <CommandItem
+                      key={driver.id}
+                      // search matches by name; the id keeps duplicates distinct
+                      value={`${driver.name} ${driver.id}`}
+                      onSelect={() => {
+                        setDriverId(driver.id);
+                        setDriverOpen(false);
+                      }}
+                    >
+                      <Check className={cn('size-4', filters.driverId !== driver.id && 'invisible')} />
+                      {driver.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      )}
 
       {hasActiveFilters && (
         <Button variant="ghost" size="sm" className="h-8 text-muted-foreground" onClick={reset}>

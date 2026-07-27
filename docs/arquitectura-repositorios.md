@@ -44,7 +44,28 @@ compensa: si el segundo insert falla, borra el primero.
 
 Lo mismo con las cascadas de borrado: en Postgres las hace el `ON DELETE
 CASCADE` de `schema.sql` (borrar turno → borra pago; borrar mantenimiento →
-borra gasto vinculado); el repositorio local las replica a mano.
+borra gasto vinculado; borrar auto/chofer/dueño → borra sus filas de
+`driver_cars` y `car_owners`); el repositorio local las replica a mano.
+
+## Las tablas puente: CRUD común, diff en el store
+
+`driver_cars` (chofer ↔ auto) y `car_owners` (auto ↔ dueño, con porcentaje)
+tienen **su propio `id` uuid y `created_at`**. No hacía falta técnicamente —
+la PK podría ser el par de FKs — pero así entran sin cambios en el
+`makeCrud`/`makeRepository` genérico y en `registerResource` del backend: cero
+código nuevo en la capa de datos, tres líneas en las rutas.
+
+Lo que sí hay que resolver es "reemplazar el conjunto": la UI dice *este
+chofer maneja estos tres autos*, no *creá esta fila*. Esa traducción es un
+**diff en `dataStore`** (`setDriverCars`, `setCarOwners`): compara con lo que
+hay, crea lo que falta, borra lo que sobra, actualiza porcentajes que
+cambiaron.
+
+Se eligió el store y no un método compuesto del repositorio a propósito: en el
+repositorio habría que escribirlo dos veces (local y api) y encima inventar un
+endpoint nuevo. En el store se escribe una vez y funciona igual contra las dos
+fuentes. El precio es que un reemplazo de varias filas no es atómico — la
+misma concesión que ya hacen los creates compuestos.
 
 ## Autenticación (solo JWT)
 

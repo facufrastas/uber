@@ -4,7 +4,7 @@ import { FilterBar } from '@/components/shared/FilterBar';
 import { KpiCard } from '@/components/shared/KpiCard';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useFilteredData } from '@/hooks/useFilteredData';
-import { computeKpis, computeKpisPrevious, expensesByCar, expensesByType, incomeByCar, incomeByDriver, incomeVsExpensesByDay } from '@/lib/analytics';
+import { computeKpis, computeKpisPrevious, expensesByCar, expensesByType, incomeByCar, incomeByDriver, incomeVsExpensesByDay, netByOwner } from '@/lib/analytics';
 import { formatARS } from '@/lib/format';
 import { ByCarChart, HorizontalBars, IncomeVsExpensesChart } from '@/features/home/charts';
 
@@ -22,6 +22,7 @@ export function HomePage() {
   const carExpenses = useMemo(() => expensesByCar(data, filtered), [data, filtered]);
   const byType = useMemo(() => expensesByType(data, filtered), [data, filtered]);
   const byDriver = useMemo(() => incomeByDriver(data, filtered), [data, filtered]);
+  const byOwner = useMemo(() => netByOwner(data, filtered), [data, filtered]);
 
   return (
     <>
@@ -41,6 +42,7 @@ export function HomePage() {
         <ByCarChart income={carIncome} expenses={carExpenses} />
         <HorizontalBars title="Gastos por tipo" data={byType} color="expenses" seriesName="Gastos" />
         <HorizontalBars title="Ingresos por chofer" data={byDriver} color="income" seriesName="Ingresos" />
+        <HorizontalBars title="Neto por dueño" data={byOwner} color="income" seriesName="Neto" />
       </div>
     </>
   );

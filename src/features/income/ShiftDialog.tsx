@@ -40,6 +40,7 @@ interface ShiftDialogProps {
 export function ShiftDialog({ open, onOpenChange, shift, payment }: ShiftDialogProps) {
   const cars = useDataStore((s) => s.cars);
   const drivers = useDataStore((s) => s.drivers);
+  const driverCars = useDataStore((s) => s.driverCars);
   const addShiftWithPayment = useDataStore((s) => s.addShiftWithPayment);
   const updateShift = useDataStore((s) => s.updateShift);
   const updatePayment = useDataStore((s) => s.updatePayment);
@@ -70,12 +71,17 @@ export function ShiftDialog({ open, onOpenChange, shift, payment }: ShiftDialogP
         },
   });
 
-  // when choosing a driver, preselect their assigned car
+  // when choosing a driver, preselect their car — only if they drive exactly
+  // one, otherwise there is nothing to guess. A car left over from the
+  // previous driver is cleared so nobody records a shift on the wrong one.
   const onDriverChange = (driverId: string) => {
     form.setValue('driverId', driverId);
-    const driver = drivers.find((d) => d.id === driverId);
+    if (shift) return;
 
-    if (driver?.carId && !shift) form.setValue('carId', driver.carId);
+    const carIds = driverCars.filter((dc) => dc.driverId === driverId).map((dc) => dc.carId);
+
+    if (carIds.length === 1) form.setValue('carId', carIds[0]);
+    else if (!carIds.includes(form.getValues('carId'))) form.setValue('carId', '');
   };
 
   const onSubmit = form.handleSubmit(async (values) => {

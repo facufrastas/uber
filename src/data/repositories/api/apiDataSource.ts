@@ -3,13 +3,19 @@ import type { DataSource, MaintenanceRepository, Repository, ShiftRepository } f
 import type {
   Car,
   CarCreate,
+  CarOwner,
+  CarOwnerCreate,
   Driver,
+  DriverCar,
+  DriverCarCreate,
   DriverCreate,
   Expense,
   ExpenseCreate,
   ExpenseType,
   Maintenance,
   MaintenanceCreate,
+  Owner,
+  OwnerCreate,
   Payment,
   PaymentCreate,
   PaymentMethod,
@@ -36,6 +42,7 @@ function stripUndefined<T extends Record<string, Json | undefined>>(obj: T): Row
 }
 
 const toTime = (value: string | null) => (value ? value.slice(0, 5) : null);
+const toNumber = (value: number | string | null) => (value === null ? null : Number(value));
 
 // --- cars ---
 interface CarRow {
@@ -46,6 +53,8 @@ interface CarRow {
   year: number | null;
   current_km: number;
   active: boolean;
+  purchase_cost: number | string | null;
+  purchase_date: string | null;
   created_at: string;
 }
 
@@ -57,6 +66,8 @@ const carFromRow = (r: CarRow): Car => ({
   year: r.year,
   currentKm: r.current_km,
   active: r.active,
+  purchaseCost: toNumber(r.purchase_cost),
+  purchaseDate: r.purchase_date,
   createdAt: r.created_at,
 });
 
@@ -68,12 +79,13 @@ const carToRow = (c: Partial<CarCreate>) =>
     year: c.year,
     current_km: c.currentKm,
     active: c.active,
+    purchase_cost: c.purchaseCost,
+    purchase_date: c.purchaseDate,
   });
 
 // --- drivers ---
 interface DriverRow {
   id: string;
-  car_id: string | null;
   name: string;
   phone: string | null;
   dni: string | null;
@@ -83,7 +95,6 @@ interface DriverRow {
 
 const driverFromRow = (r: DriverRow): Driver => ({
   id: r.id,
-  carId: r.car_id,
   name: r.name,
   phone: r.phone,
   dni: r.dni,
@@ -91,7 +102,63 @@ const driverFromRow = (r: DriverRow): Driver => ({
   createdAt: r.created_at,
 });
 
-const driverToRow = (d: Partial<DriverCreate>) => stripUndefined({ car_id: d.carId, name: d.name, phone: d.phone, dni: d.dni, active: d.active });
+const driverToRow = (d: Partial<DriverCreate>) => stripUndefined({ name: d.name, phone: d.phone, dni: d.dni, active: d.active });
+
+// --- owners ---
+interface OwnerRow {
+  id: string;
+  name: string;
+  phone: string | null;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+}
+
+const ownerFromRow = (r: OwnerRow): Owner => ({
+  id: r.id,
+  name: r.name,
+  phone: r.phone,
+  notes: r.notes,
+  active: r.active,
+  createdAt: r.created_at,
+});
+
+const ownerToRow = (o: Partial<OwnerCreate>) => stripUndefined({ name: o.name, phone: o.phone, notes: o.notes, active: o.active });
+
+// --- junctions ---
+interface DriverCarRow {
+  id: string;
+  driver_id: string;
+  car_id: string;
+  created_at: string;
+}
+
+const driverCarFromRow = (r: DriverCarRow): DriverCar => ({
+  id: r.id,
+  driverId: r.driver_id,
+  carId: r.car_id,
+  createdAt: r.created_at,
+});
+
+const driverCarToRow = (dc: Partial<DriverCarCreate>) => stripUndefined({ driver_id: dc.driverId, car_id: dc.carId });
+
+interface CarOwnerRow {
+  id: string;
+  car_id: string;
+  owner_id: string;
+  percentage: number | string;
+  created_at: string;
+}
+
+const carOwnerFromRow = (r: CarOwnerRow): CarOwner => ({
+  id: r.id,
+  carId: r.car_id,
+  ownerId: r.owner_id,
+  percentage: Number(r.percentage),
+  createdAt: r.created_at,
+});
+
+const carOwnerToRow = (co: Partial<CarOwnerCreate>) => stripUndefined({ car_id: co.carId, owner_id: co.ownerId, percentage: co.percentage });
 
 // --- shifts ---
 interface ShiftRow {
@@ -265,6 +332,9 @@ interface ExpenseTypeRow {
 export const apiDataSource: DataSource = {
   cars: makeRepository<Car, CarCreate, CarRow>('/fleet/cars', carFromRow, carToRow),
   drivers: makeRepository<Driver, DriverCreate, DriverRow>('/fleet/drivers', driverFromRow, driverToRow),
+  owners: makeRepository<Owner, OwnerCreate, OwnerRow>('/fleet/owners', ownerFromRow, ownerToRow),
+  driverCars: makeRepository<DriverCar, DriverCarCreate, DriverCarRow>('/fleet/driver-cars', driverCarFromRow, driverCarToRow),
+  carOwners: makeRepository<CarOwner, CarOwnerCreate, CarOwnerRow>('/fleet/car-owners', carOwnerFromRow, carOwnerToRow),
   shifts,
   payments: makeRepository<Payment, PaymentCreate, PaymentRow>('/fleet/payments', paymentFromRow, paymentToRow),
   maintenances,

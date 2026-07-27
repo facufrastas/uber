@@ -7,6 +7,8 @@ import type { Expense, Maintenance, Payment, Shift } from '@/data/types';
 // (localDb). Important rules mirrored from schema.sql:
 //   * deleting a shift deletes its payment (ON DELETE CASCADE)
 //   * deleting a maintenance deletes its linked expense (ON DELETE CASCADE)
+//   * deleting a car, driver or owner deletes its junction rows
+//     (driver_cars / car_owners, ON DELETE CASCADE)
 
 type Row = { id: string; createdAt: string };
 
@@ -109,11 +111,29 @@ const maintenances: MaintenanceRepository = {
 export const localDataSource: DataSource = {
   cars: makeRepository(
     (db) => db.cars,
-    (cars) => ({ cars })
+    (cars) => ({ cars }),
+    (id, db) => ({
+      driverCars: db.driverCars.filter((dc) => dc.carId !== id),
+      carOwners: db.carOwners.filter((co) => co.carId !== id),
+    })
   ),
   drivers: makeRepository(
     (db) => db.drivers,
-    (drivers) => ({ drivers })
+    (drivers) => ({ drivers }),
+    (id, db) => ({ driverCars: db.driverCars.filter((dc) => dc.driverId !== id) })
+  ),
+  owners: makeRepository(
+    (db) => db.owners,
+    (owners) => ({ owners }),
+    (id, db) => ({ carOwners: db.carOwners.filter((co) => co.ownerId !== id) })
+  ),
+  driverCars: makeRepository(
+    (db) => db.driverCars,
+    (driverCars) => ({ driverCars })
+  ),
+  carOwners: makeRepository(
+    (db) => db.carOwners,
+    (carOwners) => ({ carOwners })
   ),
   shifts,
   payments: makeRepository(
