@@ -3,32 +3,24 @@
 ## El problema que resuelve
 
 La app habla con FresaStuff-API (Express), que guarda los datos de flota en
-Supabase Postgres. Pero también puede correr sin backend, con datos mock
-persistidos en el navegador. Si cada pantalla hiciera `fetch` o leyera
-localStorage directamente, soportar ambos modos tocaría **toda** la app.
+Supabase Postgres. Si cada pantalla hiciera `fetch` directamente, cambiar un
+endpoint o el mapeo de una columna tocaría **toda** la app.
 
 ## La solución: una interfaz en el medio
 
 ```
-Pantallas → useDataStore (Zustand) → DataSource (interfaz) → ¿quién implementa?
-                                                              ├── apiDataSource   (default: FresaStuff-API)
-                                                              └── localDataSource (VITE_DATA_SOURCE=local)
+Pantallas → useDataStore (Zustand) → DataSource (interfaz) → apiDataSource (FresaStuff-API)
 ```
 
 - `src/data/repositories/types.ts` define `Repository<T>` (list/create/update/remove)
-  y `DataSource` (un repositorio por entidad). **Todo devuelve Promise**, así las
-  dos implementaciones tienen la misma firma aunque una no haga red.
-- `src/data/repositories/api/apiDataSource.ts` es la implementación real:
+  y `DataSource` (un repositorio por entidad). **Todo devuelve Promise**.
+- `src/data/repositories/api/apiDataSource.ts` es la implementación:
   `fetch` contra `/fleet/*` mapeando snake_case ↔ camelCase (columnas 1:1 con
   los tipos del dominio). Dos detalles de Postgres viven en los mappers:
   `time` vuelve como `'HH:mm:ss'` (la app usa `'HH:mm'`) y `numeric` puede
   llegar como string (siempre `Number()`).
-- `src/data/repositories/local/localDataSource.ts` es el modo offline: lee y
-  escribe un store Zustand *vanilla* persistido en localStorage (`localDb.ts`).
-- `src/data/repositories/index.ts` → `getDataSource()` elige según
-  `VITE_DATA_SOURCE`. Es **el único punto de decisión**: nada más en la app
-  sabe qué modo está activo (salvo la UI de login/reset, que usa el flag
-  `isLocalDataSource`).
+- `src/data/repositories/index.ts` → `getDataSource()` es **el único punto de
+  acceso**: nada más en la app importa un data source directamente.
 
 ## Métodos compuestos = reglas de negocio
 
@@ -45,7 +37,7 @@ compensa: si el segundo insert falla, borra el primero.
 Lo mismo con las cascadas de borrado: en Postgres las hace el `ON DELETE
 CASCADE` de `schema.sql` (borrar turno → borra pago; borrar mantenimiento →
 borra gasto vinculado; borrar auto/chofer/dueño → borra sus filas de
-`driver_cars` y `car_owners`); el repositorio local las replica a mano.
+`driver_cars` y `car_owners`).
 
 ## Las tablas puente: CRUD común, diff en el store
 
@@ -62,10 +54,9 @@ hay, crea lo que falta, borra lo que sobra, actualiza porcentajes que
 cambiaron.
 
 Se eligió el store y no un método compuesto del repositorio a propósito: en el
-repositorio habría que escribirlo dos veces (local y api) y encima inventar un
-endpoint nuevo. En el store se escribe una vez y funciona igual contra las dos
-fuentes. El precio es que un reemplazo de varias filas no es atómico — la
-misma concesión que ya hacen los creates compuestos.
+repositorio habría que inventar un endpoint nuevo para algo que el CRUD
+genérico ya cubre. El precio es que un reemplazo de varias filas no es
+atómico — la misma concesión que ya hacen los creates compuestos.
 
 ## Autenticación (solo JWT)
 
@@ -83,8 +74,7 @@ un bundle de frontend público.
 
 ## Por qué los ids se generan en el cliente del backend
 
-`crypto.randomUUID()` en los controllers de FresaStuff-API (y en el
-repositorio local) produce ids con la misma forma que los `uuid DEFAULT
-gen_random_uuid()` de Postgres — es el mismo patrón que ya usaban los
-controllers Supabase existentes (`controllers/notes/supabase.ts`). Los datos
-mock y los reales son estructuralmente idénticos.
+`crypto.randomUUID()` en los controllers de FresaStuff-API produce ids con la
+misma forma que los `uuid DEFAULT gen_random_uuid()` de Postgres — es el mismo
+patrón que ya usaban los controllers Supabase existentes
+(`controllers/notes/supabase.ts`).

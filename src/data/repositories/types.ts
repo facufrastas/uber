@@ -20,9 +20,8 @@ import type {
   ShiftCreate,
 } from '@/data/types';
 
-// Generic data-access contract. The same interface is implemented by
-// apiDataSource (FresaStuff-API, the default) and localDataSource
-// (localStorage mock) — screens and stores never know which one is behind.
+// Generic data-access contract, implemented by apiDataSource
+// (FresaStuff-API) — screens and stores only ever see this interface.
 export interface Repository<T, TCreate, TUpdate = Partial<TCreate>> {
   list(): Promise<T[]>;
   create(input: TCreate): Promise<T>;
@@ -56,6 +55,4 @@ export interface DataSource {
   // both data sources without bespoke endpoints.
   driverCars: Repository<DriverCar, DriverCarCreate>;
   carOwners: Repository<CarOwner, CarOwnerCreate>;
-  seedIfEmpty(): Promise<void>;
-  resetSeed(): Promise<void>;
 }

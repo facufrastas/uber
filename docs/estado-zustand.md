@@ -1,29 +1,15 @@
-# Estado con Zustand: cuatro stores, cuatro trabajos distintos
+# Estado con Zustand: tres stores, tres trabajos distintos
 
 ## El mapa
 
 | Store | Tipo | ¿Persistido? | Rol |
 |---|---|---|---|
 | `useAuthStore` (`stores/authStore.ts`) | hook React | ✅ localStorage `uber-auth` | Tokens JWT de la sesión |
-| `localDb` (`data/repositories/local/localDb.ts`) | vanilla (`zustand/vanilla`) | ✅ localStorage `uber-db` | **Es la base de datos mock** (solo modo local) |
 | `useDataStore` (`stores/dataStore.ts`) | hook React | ❌ | Cache en memoria + acciones |
 | `useExchangeRateStore` (`stores/exchangeRateStore.ts`) | hook React | ❌ | Cotización del dólar oficial, un fetch por sesión |
 
 (El tema claro/oscuro no usa Zustand: es un Context minúsculo en
 `components/theme-provider.tsx` con su propia clave de localStorage.)
-
-## ¿Por qué el "DB" es un store vanilla?
-
-`createStore` de `zustand/vanilla` crea un store sin React. Le ponemos el
-middleware `persist` y obtenemos gratis:
-
-- serialización automática a localStorage,
-- `version` + `migrate` para cuando cambie la forma de los datos — la v2
-  (dueños y las tablas puente) migra **descartando**: los datos v1 no tienen
-  filas de `driver_cars`, así que rehidratarlos mostraría una flota sin nadie
-  asignado. Arrancar vacío hace que `seedIfEmpty()` reconstruya todo,
-- una API síncrona (`getState`/`setState`) que el repositorio local usa como
-  si fuera un motor de base de datos en miniatura.
 
 ## ¿Por qué `useDataStore` NO se persiste?
 

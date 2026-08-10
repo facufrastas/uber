@@ -22,14 +22,9 @@ pnpm dev      # http://localhost:5173
 pnpm build    # typecheck + build de producción
 ```
 
-Por defecto la app habla con FresaStuff-API (`/fleet/*`, ver `.env.example`
+La app habla con FresaStuff-API (`/fleet/*`, ver `.env.example`
 para `VITE_API_URL`) y pide login. Autenticación: **solo JWT** — access token
 de 1 h renovado automáticamente con el refresh token de 7 días.
-
-**Modo local (sin backend):** `VITE_DATA_SOURCE=local pnpm dev`. No hay login;
-al primer arranque se siembran datos de prueba determinísticos (~2 meses de
-actividad) y "Restablecer datos de prueba" (pie del sidebar) vuelve al estado
-inicial.
 
 ## Secciones
 

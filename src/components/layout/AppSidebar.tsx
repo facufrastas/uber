@@ -1,14 +1,11 @@
-import { Car, Home, LogOut, Moon, RefreshCw, Sun, SunMoon, TrendingDown, TrendingUp, Wrench } from 'lucide-react';
+import { Car, Home, LogOut, Moon, Sun, SunMoon, TrendingDown, TrendingUp, Wrench } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar';
 import { useTheme } from '@/components/theme-provider';
-import { isLocalDataSource } from '@/data/repositories';
 import { useAuthStore } from '@/stores/authStore';
-import { useDataStore } from '@/stores/dataStore';
 
 const SECTIONS = [
   { title: 'Inicio', url: '/', icon: Home },
@@ -21,7 +18,6 @@ const SECTIONS = [
 export function AppSidebar() {
   const location = useLocation();
   const { setTheme } = useTheme();
-  const resetSeed = useDataStore((s) => s.resetSeed);
   const clearSession = useAuthStore((s) => s.clear);
   const { setOpenMobile } = useSidebar();
 
@@ -73,20 +69,6 @@ export function AppSidebar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        {isLocalDataSource && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="justify-start text-muted-foreground"
-            onClick={async () => {
-              await resetSeed();
-              toast.success('Datos de prueba restablecidos');
-            }}
-          >
-            <RefreshCw />
-            Restablecer datos de prueba
-          </Button>
-        )}
         <Button variant="ghost" size="sm" className="justify-start text-muted-foreground" onClick={clearSession}>
           <LogOut />
           Cerrar sesión

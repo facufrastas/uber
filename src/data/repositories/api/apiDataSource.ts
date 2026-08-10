@@ -346,7 +346,4 @@ export const apiDataSource: DataSource = {
     },
   },
   expenses: makeRepository<Expense, ExpenseCreate, ExpenseRow>('/fleet/expenses', expenseFromRow, expenseToRow),
-  // the real database is seeded by schema.sql, not by the app
-  async seedIfEmpty() {},
-  async resetSeed() {},
 };

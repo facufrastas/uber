@@ -48,7 +48,6 @@ interface DataState {
   expenses: Expense[];
 
   loadAll: () => Promise<void>;
-  resetSeed: () => Promise<void>;
 
   addCar: (input: CarCreate, owners?: OwnerShare[]) => Promise<void>;
   updateCar: (id: string, input: Partial<CarCreate>, owners?: OwnerShare[]) => Promise<void>;
@@ -133,7 +132,6 @@ export const useDataStore = create<DataState>()((set, get) => {
       if (get().status === 'loading') return;
       set({ status: 'loading' });
       try {
-        await ds.seedIfEmpty();
         const [cars, drivers, owners, driverCars, carOwners, shifts, payments, maintenances, expenseTypes, expenses] = await Promise.all([
           ds.cars.list(),
           ds.drivers.list(),
@@ -154,12 +152,6 @@ export const useDataStore = create<DataState>()((set, get) => {
         console.error(err);
         set({ status: 'error' });
       }
-    },
-
-    resetSeed: async () => {
-      await ds.resetSeed();
-      set({ status: 'idle' });
-      await get().loadAll();
     },
 
     addCar: async (input, owners) => {
