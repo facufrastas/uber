@@ -10,6 +10,7 @@ import type {
   DriverCreate,
   Expense,
   ExpenseCreate,
+  ExpenseShare,
   ExpenseType,
   Maintenance,
   MaintenanceCreate,
@@ -17,6 +18,8 @@ import type {
   OwnerCreate,
   Payment,
   PaymentCreate,
+  Settlement,
+  SettlementCreate,
   Shift,
   ShiftCreate,
 } from '@/data/types';
@@ -26,6 +29,13 @@ import type {
 export interface OwnerShare {
   ownerId: string;
   percentage: number;
+}
+
+// One participant's part of an expense, as the dialogs submit it (in ARS; the
+// row's id is resolved by syncExpenseShares).
+export interface ExpenseShareInput {
+  ownerId: string;
+  amount: number;
 }
 
 // Data store for React. NOT persisted on purpose: it is only an in-memory
@@ -46,6 +56,8 @@ interface DataState {
   maintenances: Maintenance[];
   expenseTypes: ExpenseType[];
   expenses: Expense[];
+  expenseShares: ExpenseShare[];
+  settlements: Settlement[];
 
   loadAll: () => Promise<void>;
 
@@ -72,11 +84,17 @@ interface DataState {
   updatePayment: (id: string, input: Partial<PaymentCreate>) => Promise<void>;
   removeShift: (id: string) => Promise<void>;
 
-  addExpense: (input: ExpenseCreate) => Promise<void>;
-  updateExpense: (id: string, input: Partial<ExpenseCreate>) => Promise<void>;
+  // shares: the FULL split of the expense (see ExpenseShare). Passing [] wipes
+  // it — the payer bears the whole cost and nobody owes anything.
+  addExpense: (input: ExpenseCreate, shares?: ExpenseShareInput[]) => Promise<void>;
+  updateExpense: (id: string, input: Partial<ExpenseCreate>, shares?: ExpenseShareInput[]) => Promise<void>;
   removeExpense: (id: string) => Promise<void>;
 
-  addMaintenanceWithExpense: (maintenance: MaintenanceCreate, expense: Omit<ExpenseCreate, 'maintenanceId' | 'carId' | 'date'>) => Promise<void>;
+  addSettlement: (input: SettlementCreate) => Promise<void>;
+  updateSettlement: (id: string, input: Partial<SettlementCreate>) => Promise<void>;
+  removeSettlement: (id: string) => Promise<void>;
+
+  addMaintenanceWithExpense: (maintenance: MaintenanceCreate, expense: Omit<ExpenseCreate, 'maintenanceId' | 'carId' | 'date'>, shares?: ExpenseShareInput[]) => Promise<void>;
   updateMaintenance: (id: string, input: Partial<MaintenanceCreate>) => Promise<void>;
   removeMaintenance: (id: string) => Promise<void>;
 }
@@ -84,7 +102,7 @@ interface DataState {
 export const useDataStore = create<DataState>()((set, get) => {
   // after each mutation we re-read the touched collection from the
   // DataSource: the repository is the source of truth, the store just mirrors
-  const refresh = async (...keys: ('cars' | 'drivers' | 'owners' | 'driverCars' | 'carOwners' | 'shifts' | 'payments' | 'maintenances' | 'expenses')[]) => {
+  const refresh = async (...keys: ('cars' | 'drivers' | 'owners' | 'driverCars' | 'carOwners' | 'shifts' | 'payments' | 'maintenances' | 'expenses' | 'expenseShares' | 'settlements')[]) => {
     const patch: Record<string, unknown> = {};
 
     for (const key of keys) patch[key] = await ds[key].list();
@@ -115,6 +133,21 @@ export const useDataStore = create<DataState>()((set, get) => {
     ]);
   };
 
+  // Same diffing as the junctions above: the dialogs submit the whole split
+  // and this turns it into creates/updates/removes.
+  const syncExpenseShares = async (expenseId: string, shares: ExpenseShareInput[]) => {
+    const current = get().expenseShares.filter((s) => s.expenseId === expenseId);
+    const toAdd = shares.filter((s) => !current.some((row) => row.ownerId === s.ownerId));
+    const toRemove = current.filter((row) => !shares.some((s) => s.ownerId === row.ownerId));
+    const toUpdate = current.filter((row) => shares.some((s) => s.ownerId === row.ownerId && s.amount !== row.amount));
+
+    await Promise.all([
+      ...toAdd.map((s) => ds.expenseShares.create({ expenseId, ownerId: s.ownerId, amount: s.amount })),
+      ...toRemove.map((row) => ds.expenseShares.remove(row.id)),
+      ...toUpdate.map((row) => ds.expenseShares.update(row.id, { amount: shares.find((s) => s.ownerId === row.ownerId)!.amount })),
+    ]);
+  };
+
   return {
     status: 'idle',
     cars: [],
@@ -127,12 +160,14 @@ export const useDataStore = create<DataState>()((set, get) => {
     maintenances: [],
     expenseTypes: [],
     expenses: [],
+    expenseShares: [],
+    settlements: [],
 
     loadAll: async () => {
       if (get().status === 'loading') return;
       set({ status: 'loading' });
       try {
-        const [cars, drivers, owners, driverCars, carOwners, shifts, payments, maintenances, expenseTypes, expenses] = await Promise.all([
+        const [cars, drivers, owners, driverCars, carOwners, shifts, payments, maintenances, expenseTypes, expenses, expenseShares, settlements] = await Promise.all([
           ds.cars.list(),
           ds.drivers.list(),
           ds.owners.list(),
@@ -143,9 +178,11 @@ export const useDataStore = create<DataState>()((set, get) => {
           ds.maintenances.list(),
           ds.expenseTypes.list(),
           ds.expenses.list(),
+          ds.expenseShares.list(),
+          ds.settlements.list(),
         ]);
 
-        set({ status: 'ready', cars, drivers, owners, driverCars, carOwners, shifts, payments, maintenances, expenseTypes, expenses });
+        set({ status: 'ready', cars, drivers, owners, driverCars, carOwners, shifts, payments, maintenances, expenseTypes, expenses, expenseShares, settlements });
       } catch (err) {
         // an expired session already redirects via RequireAuth; this covers
         // the backend being unreachable
@@ -195,8 +232,10 @@ export const useDataStore = create<DataState>()((set, get) => {
       await refresh('owners');
     },
     removeOwner: async (id) => {
+      // the API rejects owners with settlements (FK RESTRICT); their expense
+      // shares cascade away and the expenses they paid keep no payer
       await ds.owners.remove(id);
-      await refresh('owners', 'carOwners');
+      await refresh('owners', 'carOwners', 'expenses', 'expenseShares');
     },
 
     setDriverCars: async (driverId, carIds) => {
@@ -225,22 +264,41 @@ export const useDataStore = create<DataState>()((set, get) => {
       await refresh('shifts', 'payments');
     },
 
-    addExpense: async (input) => {
-      await ds.expenses.create(input);
-      await refresh('expenses');
+    addExpense: async (input, shares) => {
+      const expense = await ds.expenses.create(input);
+
+      if (shares) await syncExpenseShares(expense.id, shares);
+      await refresh('expenses', 'expenseShares');
     },
-    updateExpense: async (id, input) => {
+    updateExpense: async (id, input, shares) => {
       await ds.expenses.update(id, input);
-      await refresh('expenses');
+      if (shares) await syncExpenseShares(id, shares);
+      await refresh('expenses', 'expenseShares');
     },
     removeExpense: async (id) => {
+      // the DB cascades the shares away with the expense
       await ds.expenses.remove(id);
-      await refresh('expenses');
+      await refresh('expenses', 'expenseShares');
     },
 
-    addMaintenanceWithExpense: async (maintenance, expense) => {
-      await ds.maintenances.createWithExpense(maintenance, expense);
-      await refresh('maintenances', 'expenses');
+    addSettlement: async (input) => {
+      await ds.settlements.create(input);
+      await refresh('settlements');
+    },
+    updateSettlement: async (id, input) => {
+      await ds.settlements.update(id, input);
+      await refresh('settlements');
+    },
+    removeSettlement: async (id) => {
+      await ds.settlements.remove(id);
+      await refresh('settlements');
+    },
+
+    addMaintenanceWithExpense: async (maintenance, expense, shares) => {
+      const { expense: created } = await ds.maintenances.createWithExpense(maintenance, expense);
+
+      if (shares) await syncExpenseShares(created.id, shares);
+      await refresh('maintenances', 'expenses', 'expenseShares');
     },
     updateMaintenance: async (id, input) => {
       await ds.maintenances.update(id, input);
@@ -248,7 +306,7 @@ export const useDataStore = create<DataState>()((set, get) => {
     },
     removeMaintenance: async (id) => {
       await ds.maintenances.remove(id);
-      await refresh('maintenances', 'expenses');
+      await refresh('maintenances', 'expenses', 'expenseShares');
     },
   };
 });

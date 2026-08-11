@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Pencil, Plus, TrendingDown, Wrench } from 'lucide-react';
+import { Pencil, Plus, TrendingDown, Users, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog';
@@ -24,6 +24,8 @@ export function ExpensesPage() {
 
   const typeById = (id: string) => data.expenseTypes.find((t) => t.id === id);
   const carById = (id: string | null) => data.cars.find((c) => c.id === id);
+  const ownerById = (id: string | null) => data.owners.find((o) => o.id === id);
+  const sharesOf = (expenseId: string) => data.expenseShares.filter((s) => s.expenseId === expenseId);
 
   const sortedExpenses = useMemo(() => [...filtered.expenses].sort((a, b) => b.date.localeCompare(a.date)), [filtered.expenses]);
 
@@ -48,6 +50,7 @@ export function ExpensesPage() {
                 <TableHead>Fecha</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Auto</TableHead>
+                <TableHead>Pagó</TableHead>
                 <TableHead>Descripción</TableHead>
                 <TableHead className="text-right">Monto</TableHead>
                 <TableHead className="w-20" />
@@ -57,6 +60,9 @@ export function ExpensesPage() {
               {sortedExpenses.map((expense) => {
                 const car = carById(expense.carId);
                 const isMaintenanceExpense = expense.maintenanceId !== null;
+                const payer = ownerById(expense.paidByOwnerId);
+                // what the OTHERS bear: the payer's own share is not a debt
+                const debtShares = sharesOf(expense.id).filter((s) => s.ownerId !== expense.paidByOwnerId);
 
                 return (
                   <TableRow key={expense.id}>
@@ -65,6 +71,22 @@ export function ExpensesPage() {
                       <Badge variant="secondary">{typeById(expense.expenseTypeId)?.name ?? '—'}</Badge>
                     </TableCell>
                     <TableCell>{car ? `${car.model} ${car.licensePlate}` : <span className="text-muted-foreground">General</span>}</TableCell>
+                    <TableCell>
+                      {payer ? (
+                        <div className="flex items-center gap-1.5">
+                          <span>{payer.name}</span>
+                          {debtShares.length > 0 && (
+                            // the hover text spells out who owes what; the badge keeps the row short
+                            <Badge variant="outline" className="gap-1" title={debtShares.map((s) => `${ownerById(s.ownerId)?.name ?? 'Dueño eliminado'} debe ${formatARS(s.amount)}`).join('\n')}>
+                              <Users />
+                              {formatARS(debtShares.reduce((sum, s) => sum + s.amount, 0))}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="max-w-64 truncate text-muted-foreground">
                       {expense.description ?? '—'}
                       {isMaintenanceExpense && (
@@ -99,7 +121,7 @@ export function ExpensesPage() {
                 );
               })}
               <TableRow className="bg-muted/50 font-medium">
-                <TableCell colSpan={4}>Total ({sortedExpenses.length} gastos)</TableCell>
+                <TableCell colSpan={5}>Total ({sortedExpenses.length} gastos)</TableCell>
                 <TableCell className="text-right tabular-nums">{formatARS(total)}</TableCell>
                 <TableCell />
               </TableRow>

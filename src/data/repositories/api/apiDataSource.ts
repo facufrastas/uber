@@ -11,6 +11,8 @@ import type {
   DriverCreate,
   Expense,
   ExpenseCreate,
+  ExpenseShare,
+  ExpenseShareCreate,
   ExpenseType,
   Maintenance,
   MaintenanceCreate,
@@ -19,6 +21,8 @@ import type {
   Payment,
   PaymentCreate,
   PaymentMethod,
+  Settlement,
+  SettlementCreate,
   Shift,
   ShiftCreate,
 } from '@/data/types';
@@ -243,6 +247,7 @@ interface ExpenseRow {
   expense_type_id: string;
   car_id: string | null;
   maintenance_id: string | null;
+  paid_by_owner_id: string | null;
   amount: number | string;
   date: string;
   description: string | null;
@@ -254,6 +259,8 @@ const expenseFromRow = (r: ExpenseRow): Expense => ({
   expenseTypeId: r.expense_type_id,
   carId: r.car_id,
   maintenanceId: r.maintenance_id,
+  // rows created before the split feature have no column value
+  paidByOwnerId: r.paid_by_owner_id ?? null,
   amount: Number(r.amount),
   date: r.date,
   description: r.description,
@@ -265,10 +272,52 @@ const expenseToRow = (e: Partial<ExpenseCreate>) =>
     expense_type_id: e.expenseTypeId,
     car_id: e.carId,
     maintenance_id: e.maintenanceId,
+    paid_by_owner_id: e.paidByOwnerId,
     amount: e.amount,
     date: e.date,
     description: e.description,
   });
+
+// --- expense shares / settlements ---
+interface ExpenseShareRow {
+  id: string;
+  expense_id: string;
+  owner_id: string;
+  amount: number | string;
+  created_at: string;
+}
+
+const expenseShareFromRow = (r: ExpenseShareRow): ExpenseShare => ({
+  id: r.id,
+  expenseId: r.expense_id,
+  ownerId: r.owner_id,
+  amount: Number(r.amount),
+  createdAt: r.created_at,
+});
+
+const expenseShareToRow = (s: Partial<ExpenseShareCreate>) => stripUndefined({ expense_id: s.expenseId, owner_id: s.ownerId, amount: s.amount });
+
+interface SettlementRow {
+  id: string;
+  from_owner_id: string;
+  to_owner_id: string;
+  amount: number | string;
+  date: string;
+  notes: string | null;
+  created_at: string;
+}
+
+const settlementFromRow = (r: SettlementRow): Settlement => ({
+  id: r.id,
+  fromOwnerId: r.from_owner_id,
+  toOwnerId: r.to_owner_id,
+  amount: Number(r.amount),
+  date: r.date,
+  notes: r.notes,
+  createdAt: r.created_at,
+});
+
+const settlementToRow = (s: Partial<SettlementCreate>) => stripUndefined({ from_owner_id: s.fromOwnerId, to_owner_id: s.toOwnerId, amount: s.amount, date: s.date, notes: s.notes });
 
 // --- generic repository over one /fleet resource ---
 function makeRepository<T, TCreate, Row>(path: string, fromRow: (row: Row) => T, toRow: (input: Partial<TCreate>) => RowShape): Repository<T, TCreate> {
@@ -346,4 +395,6 @@ export const apiDataSource: DataSource = {
     },
   },
   expenses: makeRepository<Expense, ExpenseCreate, ExpenseRow>('/fleet/expenses', expenseFromRow, expenseToRow),
+  expenseShares: makeRepository<ExpenseShare, ExpenseShareCreate, ExpenseShareRow>('/fleet/expense-shares', expenseShareFromRow, expenseShareToRow),
+  settlements: makeRepository<Settlement, SettlementCreate, SettlementRow>('/fleet/settlements', settlementFromRow, settlementToRow),
 };

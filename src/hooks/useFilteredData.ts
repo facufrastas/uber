@@ -16,11 +16,13 @@ export function useFilteredData() {
   const payments = useDataStore((s) => s.payments);
   const expenses = useDataStore((s) => s.expenses);
   const expenseTypes = useDataStore((s) => s.expenseTypes);
+  const expenseShares = useDataStore((s) => s.expenseShares);
+  const settlements = useDataStore((s) => s.settlements);
   const { filters } = useFilters();
 
   const data: DataSlice = useMemo(
-    () => ({ cars, drivers, owners, driverCars, carOwners, shifts, payments, expenses, expenseTypes }),
-    [cars, drivers, owners, driverCars, carOwners, shifts, payments, expenses, expenseTypes]
+    () => ({ cars, drivers, owners, driverCars, carOwners, shifts, payments, expenses, expenseTypes, expenseShares, settlements }),
+    [cars, drivers, owners, driverCars, carOwners, shifts, payments, expenses, expenseTypes, expenseShares, settlements]
   );
 
   const filtered = useMemo(() => applyFilters(data, filters), [data, filters]);

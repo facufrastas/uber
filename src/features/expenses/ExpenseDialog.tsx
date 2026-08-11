@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useDataStore } from '@/stores/dataStore';
 import type { Expense } from '@/data/types';
+import { ExpenseSplitFields } from '@/features/expenses/ExpenseSplitFields';
+import { emptySplit, NO_PAYER, sharesToSplit, splitSchema, splitToShares } from '@/features/expenses/expenseSplit';
 
 const NO_CAR = '__no_car__';
 
@@ -21,6 +23,7 @@ const schema = z.object({
   amount: z.number({ message: 'Ingresá un monto' }).positive('Debe ser mayor a 0'),
   date: z.string().min(1, 'Requerido'),
   description: z.string(),
+  split: splitSchema,
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -34,6 +37,7 @@ interface ExpenseDialogProps {
 export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProps) {
   const cars = useDataStore((s) => s.cars);
   const expenseTypes = useDataStore((s) => s.expenseTypes);
+  const expenseShares = useDataStore((s) => s.expenseShares);
   const addExpense = useDataStore((s) => s.addExpense);
   const updateExpense = useDataStore((s) => s.updateExpense);
 
@@ -49,8 +53,13 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
           amount: expense.amount,
           date: expense.date,
           description: expense.description ?? '',
+          split: sharesToSplit(
+            expense.paidByOwnerId,
+            expenseShares.filter((s) => s.expenseId === expense.id),
+            expense.amount
+          ),
         }
-      : { expenseTypeId: '', carId: NO_CAR, amount: 0, date: today, description: '' },
+      : { expenseTypeId: '', carId: NO_CAR, amount: 0, date: today, description: '', split: emptySplit },
   });
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -58,16 +67,20 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
       expenseTypeId: values.expenseTypeId,
       carId: values.carId === NO_CAR ? null : values.carId,
       maintenanceId: expense?.maintenanceId ?? null,
+      paidByOwnerId: values.split.paidByOwnerId === NO_PAYER ? null : values.split.paidByOwnerId,
       amount: values.amount,
       date: values.date,
       description: values.description || null,
     };
+    // the shares are rewritten from the percentages on every save, so editing
+    // the amount keeps the split consistent
+    const shares = splitToShares(values.split, values.amount);
 
     if (expense) {
-      await updateExpense(expense.id, input);
+      await updateExpense(expense.id, input, shares);
       toast.success('Gasto actualizado');
     } else {
-      await addExpense(input);
+      await addExpense(input, shares);
       toast.success('Gasto registrado');
     }
     onOpenChange(false);
@@ -78,7 +91,7 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{expense ? 'Editar gasto' : 'Nuevo gasto'}</DialogTitle>
         </DialogHeader>
@@ -146,6 +159,11 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
               <FieldLabel htmlFor="expense-description">Descripción</FieldLabel>
               <Textarea id="expense-description" rows={2} {...form.register('description')} />
             </Field>
+            <Controller
+              control={form.control}
+              name="split"
+              render={({ field }) => <ExpenseSplitFields value={field.value} onChange={field.onChange} amount={form.watch('amount')} error={errors.split?.message} />}
+            />
           </FieldGroup>
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

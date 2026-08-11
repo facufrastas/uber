@@ -4,7 +4,7 @@
 -- Run this whole file in the Supabase SQL Editor.
 -- Creation order respects FK dependencies:
 --   cars → owners → car_owners → drivers → driver_cars → shifts → payments
---   → maintenances → expense_types → expenses
+--   → maintenances → expense_types → expenses → expense_shares → settlements
 --
 -- Decisions:
 --   * uuid PKs with DEFAULT gen_random_uuid(): native in Postgres 13+ (no
@@ -186,21 +186,74 @@ insert into expense_types (name) values
 -- linked expense (the app creates it automatically). ON DELETE CASCADE:
 -- deleting the maintenance deletes its expense.
 -- ON DELETE RESTRICT on expense_type_id: a type in use cannot be deleted.
+-- paid_by_owner_id: who actually put the money in. Nullable — legacy expenses
+-- and ones nobody claims have no payer. ON DELETE SET NULL: deleting an owner
+-- must not delete accounting history.
 -- ----------------------------------------------------------------------------
 create table expenses (
-  id               uuid primary key default gen_random_uuid(),
-  expense_type_id  uuid not null references expense_types (id) on delete restrict,
-  car_id           uuid references cars (id) on delete set null,
-  maintenance_id   uuid unique references maintenances (id) on delete cascade,
-  amount           numeric(12,2) not null check (amount > 0),
-  date             date not null,
-  description      text,
-  created_at       timestamptz not null default now()
+  id                uuid primary key default gen_random_uuid(),
+  expense_type_id   uuid not null references expense_types (id) on delete restrict,
+  car_id            uuid references cars (id) on delete set null,
+  maintenance_id    uuid unique references maintenances (id) on delete cascade,
+  paid_by_owner_id  uuid references owners (id) on delete set null,
+  amount            numeric(12,2) not null check (amount > 0),
+  date              date not null,
+  description       text,
+  created_at        timestamptz not null default now()
 );
 
-create index expenses_date_idx            on expenses (date);
-create index expenses_car_id_idx          on expenses (car_id);
-create index expenses_expense_type_id_idx on expenses (expense_type_id);
+create index expenses_date_idx             on expenses (date);
+create index expenses_car_id_idx           on expenses (car_id);
+create index expenses_expense_type_id_idx  on expenses (expense_type_id);
+create index expenses_paid_by_owner_id_idx on expenses (paid_by_owner_id);
+
+-- ----------------------------------------------------------------------------
+-- EXPENSE SHARES
+-- How one expense is split between owners: one row per participant with the
+-- ARS amount that participant bears. No rows at all = not split (the payer
+-- bears everything). When there are rows, the app makes them add up to the
+-- expense's amount (a CHECK cannot aggregate rows nor reach another table).
+--
+-- The amount is stored, not a percentage: uneven splits are expressible and
+-- the debt math is a plain sum. The dialog re-sends the whole set whenever the
+-- expense amount changes, so the rows never go stale.
+--
+-- The payer's own share is a row too, and it is NOT a debt: whoever owes money
+-- is every share whose owner_id differs from the expense's paid_by_owner_id.
+-- ----------------------------------------------------------------------------
+create table expense_shares (
+  id          uuid primary key default gen_random_uuid(),
+  expense_id  uuid not null references expenses (id) on delete cascade,
+  owner_id    uuid not null references owners (id) on delete cascade,
+  amount      numeric(12,2) not null check (amount > 0),
+  created_at  timestamptz not null default now(),
+  unique (expense_id, owner_id)
+);
+
+create index expense_shares_expense_id_idx on expense_shares (expense_id);
+create index expense_shares_owner_id_idx   on expense_shares (owner_id);
+
+-- ----------------------------------------------------------------------------
+-- SETTLEMENTS
+-- Money moving between two owners to cancel a debt ("person 2 pays person 1
+-- back"). Deliberately NOT an expense: it is not a fleet cost, it must never
+-- reach the KPIs — it only reduces a balance.
+-- ON DELETE RESTRICT: an owner with settlement history cannot be deleted.
+-- ----------------------------------------------------------------------------
+create table settlements (
+  id             uuid primary key default gen_random_uuid(),
+  from_owner_id  uuid not null references owners (id) on delete restrict,
+  to_owner_id    uuid not null references owners (id) on delete restrict,
+  amount         numeric(12,2) not null check (amount > 0),
+  date           date not null,
+  notes          text,
+  created_at     timestamptz not null default now(),
+  check (from_owner_id <> to_owner_id)
+);
+
+create index settlements_date_idx  on settlements (date);
+create index settlements_from_idx  on settlements (from_owner_id);
+create index settlements_to_idx    on settlements (to_owner_id);
 
 -- ============================================================================
 -- ROW LEVEL SECURITY
@@ -220,3 +273,5 @@ alter table payments       enable row level security;
 alter table maintenances   enable row level security;
 alter table expense_types  enable row level security;
 alter table expenses       enable row level security;
+alter table expense_shares enable row level security;
+alter table settlements    enable row level security;

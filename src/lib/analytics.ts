@@ -1,6 +1,6 @@
 import type { Filters } from '@/hooks/useFilters';
 import { daysInRange, previousRange, type DateRange } from '@/lib/dates';
-import type { Car, CarOwner, Driver, DriverCar, Expense, ExpenseType, Owner, Payment, Shift } from '@/data/types';
+import type { Car, CarOwner, Driver, DriverCar, Expense, ExpenseShare, ExpenseType, Owner, Payment, Settlement, Shift } from '@/data/types';
 
 // PURE selectors: (data, filters) => result. No state, no hooks, testable in
 // isolation. The UI consumes them via useFilteredData (useMemo).
@@ -15,6 +15,8 @@ export interface DataSlice {
   payments: Payment[];
   expenses: Expense[];
   expenseTypes: ExpenseType[];
+  expenseShares: ExpenseShare[];
+  settlements: Settlement[];
 }
 
 export interface FilteredData {
@@ -270,6 +272,128 @@ export function carPayoff(data: DataSlice, carId: string, rateArsPerUsd: number 
     costUsd: car.purchaseCost,
     pct: earnedUsd === null ? null : (earnedUsd / car.purchaseCost) * 100,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Debts between owners
+// ---------------------------------------------------------------------------
+//
+// One owner pays an expense, the others bear a share of it: each share of an
+// expense paid by SOMEONE ELSE is a debt from the share's owner to the payer
+// (140k paid by A, split 50/50 → B owes A 70k). A settlement is the same debt
+// in the opposite direction, which is exactly what "paying back" does to the
+// balance.
+//
+// Deliberately NOT filtered by the date range (like carPayoff): a debt does
+// not stop existing because the dashboard is showing this month.
+
+export interface DebtEntry {
+  id: string;
+  kind: 'expense' | 'settlement';
+  debtorId: string; // owes the money
+  creditorId: string; // is owed the money
+  amount: number; // always > 0; a settlement points the other way instead
+  date: string;
+  description: string | null;
+  expenseId: string | null;
+}
+
+type DebtSlice = Pick<DataSlice, 'owners' | 'expenses' | 'expenseShares' | 'settlements'>;
+
+export function debtEntries(data: DebtSlice): DebtEntry[] {
+  const expenseById = new Map(data.expenses.map((e) => [e.id, e]));
+  const entries: DebtEntry[] = [];
+
+  for (const share of data.expenseShares) {
+    const expense = expenseById.get(share.expenseId);
+
+    // no payer = nobody to owe; the payer's own share is a cost, not a debt
+    if (!expense || expense.paidByOwnerId === null || expense.paidByOwnerId === share.ownerId) continue;
+
+    entries.push({
+      id: share.id,
+      kind: 'expense',
+      debtorId: share.ownerId,
+      creditorId: expense.paidByOwnerId,
+      amount: share.amount,
+      date: expense.date,
+      description: expense.description,
+      expenseId: expense.id,
+    });
+  }
+
+  for (const settlement of data.settlements) {
+    entries.push({
+      id: settlement.id,
+      kind: 'settlement',
+      debtorId: settlement.toOwnerId,
+      creditorId: settlement.fromOwnerId,
+      amount: settlement.amount,
+      date: settlement.date,
+      description: settlement.notes,
+      expenseId: null,
+    });
+  }
+
+  return entries.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export interface DebtBalance {
+  debtorId: string;
+  creditorId: string;
+  amount: number; // net, always > 0 — the direction lives in the ids
+}
+
+// Net balance per pair of owners. Pairs that cancel out exactly disappear:
+// there is nothing left to pay.
+export function debtBalances(data: DebtSlice): DebtBalance[] {
+  // key is the pair with its ids sorted, so both directions land on one row
+  const nets = new Map<string, number>();
+
+  for (const entry of debtEntries(data)) {
+    const [first, second] = [entry.debtorId, entry.creditorId].sort();
+    const key = `${first}|${second}`;
+    // positive = `first` owes `second`
+    const signed = entry.debtorId === first ? entry.amount : -entry.amount;
+
+    nets.set(key, (nets.get(key) ?? 0) + signed);
+  }
+
+  const balances: DebtBalance[] = [];
+
+  for (const [key, net] of nets) {
+    // sub-peso leftovers come from splitting odd amounts: not a real debt
+    if (Math.abs(net) < 0.01) continue;
+
+    const [first, second] = key.split('|');
+
+    balances.push(net > 0 ? { debtorId: first, creditorId: second, amount: net } : { debtorId: second, creditorId: first, amount: -net });
+  }
+
+  return balances.sort((a, b) => b.amount - a.amount);
+}
+
+// Per owner: what they are owed minus what they owe. Positive = the fleet owes
+// them money. Owners with nothing pending drop out.
+export function debtNetByOwner(data: DebtSlice): AmountByName[] {
+  const sums = new Map<string, number>();
+
+  for (const { debtorId, creditorId, amount } of debtBalances(data)) {
+    sums.set(creditorId, (sums.get(creditorId) ?? 0) + amount);
+    sums.set(debtorId, (sums.get(debtorId) ?? 0) - amount);
+  }
+
+  return data.owners
+    .map((o) => ({ id: o.id, name: o.name, amount: sums.get(o.id) ?? 0 }))
+    .filter((r) => Math.abs(r.amount) >= 0.01)
+    .sort((a, b) => b.amount - a.amount);
+}
+
+// The movements behind one pair's balance, newest first.
+export function debtEntriesBetween(data: DebtSlice, ownerA: string, ownerB: string): DebtEntry[] {
+  const pair = new Set([ownerA, ownerB]);
+
+  return debtEntries(data).filter((e) => pair.has(e.debtorId) && pair.has(e.creditorId));
 }
 
 // Percentages of a car must add up to 100 — enforced by the forms, but an

@@ -1,4 +1,4 @@
-import { Car, Home, LogOut, Moon, Sun, SunMoon, TrendingDown, TrendingUp, Wrench } from 'lucide-react';
+import { Car, HandCoins, Home, LogOut, Moon, Sun, SunMoon, TrendingDown, TrendingUp, Wrench } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ const SECTIONS = [
   { title: 'Inicio', url: '/', icon: Home },
   { title: 'Ingresos', url: '/income', icon: TrendingUp },
   { title: 'Gastos', url: '/expenses', icon: TrendingDown },
+  { title: 'Deudas', url: '/debts', icon: HandCoins },
   { title: 'Autos', url: '/cars', icon: Car },
   { title: 'Mantenimientos', url: '/maintenance', icon: Wrench },
 ];

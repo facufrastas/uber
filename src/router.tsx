@@ -5,6 +5,7 @@ import { LoginPage } from '@/features/auth/LoginPage';
 import { RequireAuth } from '@/features/auth/RequireAuth';
 import { CarDetailPage } from '@/features/cars/CarDetailPage';
 import { CarsPage } from '@/features/cars/CarsPage';
+import { DebtsPage } from '@/features/debts/DebtsPage';
 import { ExpensesPage } from '@/features/expenses/ExpensesPage';
 import { HomePage } from '@/features/home/HomePage';
 import { IncomePage } from '@/features/income/IncomePage';
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
       { path: '/', element: <HomePage /> },
       { path: '/income', element: <IncomePage /> },
       { path: '/expenses', element: <ExpensesPage /> },
+      { path: '/debts', element: <DebtsPage /> },
       { path: '/cars', element: <CarsPage /> },
       { path: '/cars/:id', element: <CarDetailPage /> },
       { path: '/maintenance', element: <MaintenancePage /> },

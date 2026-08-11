@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useDataStore } from '@/stores/dataStore';
 import type { Expense, Maintenance } from '@/data/types';
+import { ExpenseSplitFields } from '@/features/expenses/ExpenseSplitFields';
+import { emptySplit, NO_PAYER, sharesToSplit, splitSchema, splitToShares } from '@/features/expenses/expenseSplit';
 
 const schema = z.object({
   carId: z.string().min(1, 'Elegí un auto'),
@@ -20,6 +22,8 @@ const schema = z.object({
   date: z.string().min(1, 'Requerido'),
   amount: z.number({ message: 'Ingresá un monto' }).positive('Debe ser mayor a 0'),
   notes: z.string(),
+  // the linked expense can be split between owners like any other one
+  split: splitSchema,
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -34,6 +38,7 @@ interface MaintenanceDialogProps {
 export function MaintenanceDialog({ open, onOpenChange, maintenance, expense }: MaintenanceDialogProps) {
   const cars = useDataStore((s) => s.cars);
   const expenseTypes = useDataStore((s) => s.expenseTypes);
+  const expenseShares = useDataStore((s) => s.expenseShares);
   const addMaintenanceWithExpense = useDataStore((s) => s.addMaintenanceWithExpense);
   const updateMaintenance = useDataStore((s) => s.updateMaintenance);
   const updateExpense = useDataStore((s) => s.updateExpense);
@@ -51,8 +56,15 @@ export function MaintenanceDialog({ open, onOpenChange, maintenance, expense }: 
           date: maintenance.date,
           amount: expense?.amount ?? 0,
           notes: maintenance.notes ?? '',
+          split: expense
+            ? sharesToSplit(
+                expense.paidByOwnerId,
+                expenseShares.filter((s) => s.expenseId === expense.id),
+                expense.amount
+              )
+            : emptySplit,
         }
-      : { carId: '', serviceType: '', km: 0, date: today, amount: 0, notes: '' },
+      : { carId: '', serviceType: '', km: 0, date: today, amount: 0, notes: '', split: emptySplit },
   });
 
   const maintenanceTypeId = () => expenseTypes.find((t) => t.name === 'Mantenimiento')?.id ?? expenseTypes[0]?.id ?? '';
@@ -66,24 +78,37 @@ export function MaintenanceDialog({ open, onOpenChange, maintenance, expense }: 
       notes: values.notes || null,
     };
 
+    const paidByOwnerId = values.split.paidByOwnerId === NO_PAYER ? null : values.split.paidByOwnerId;
+    const shares = splitToShares(values.split, values.amount);
+
     if (maintenance) {
       await updateMaintenance(maintenance.id, maintenanceInput);
-      // keep the linked expense in sync (amount, date, car)
+      // keep the linked expense in sync (amount, date, car, split)
       if (expense) {
-        await updateExpense(expense.id, {
-          amount: values.amount,
-          date: values.date,
-          carId: values.carId,
-          description: values.serviceType,
-        });
+        await updateExpense(
+          expense.id,
+          {
+            amount: values.amount,
+            date: values.date,
+            carId: values.carId,
+            paidByOwnerId,
+            description: values.serviceType,
+          },
+          shares
+        );
       }
       toast.success('Mantenimiento actualizado');
     } else {
-      await addMaintenanceWithExpense(maintenanceInput, {
-        expenseTypeId: maintenanceTypeId(),
-        amount: values.amount,
-        description: values.serviceType,
-      });
+      await addMaintenanceWithExpense(
+        maintenanceInput,
+        {
+          expenseTypeId: maintenanceTypeId(),
+          paidByOwnerId,
+          amount: values.amount,
+          description: values.serviceType,
+        },
+        shares
+      );
       toast.success('Mantenimiento registrado (gasto creado automáticamente)');
     }
     onOpenChange(false);
@@ -94,7 +119,7 @@ export function MaintenanceDialog({ open, onOpenChange, maintenance, expense }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{maintenance ? 'Editar mantenimiento' : 'Nuevo mantenimiento'}</DialogTitle>
           <DialogDescription>El costo se registra automáticamente como gasto de tipo Mantenimiento.</DialogDescription>
@@ -151,6 +176,11 @@ export function MaintenanceDialog({ open, onOpenChange, maintenance, expense }: 
               <FieldLabel htmlFor="maintenance-notes">Notas</FieldLabel>
               <Textarea id="maintenance-notes" rows={2} {...form.register('notes')} />
             </Field>
+            <Controller
+              control={form.control}
+              name="split"
+              render={({ field }) => <ExpenseSplitFields value={field.value} onChange={field.onChange} amount={form.watch('amount')} error={errors.split?.message} />}
+            />
           </FieldGroup>
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

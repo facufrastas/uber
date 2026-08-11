@@ -9,6 +9,8 @@ import type {
   DriverCreate,
   Expense,
   ExpenseCreate,
+  ExpenseShare,
+  ExpenseShareCreate,
   ExpenseType,
   Maintenance,
   MaintenanceCreate,
@@ -16,6 +18,8 @@ import type {
   OwnerCreate,
   Payment,
   PaymentCreate,
+  Settlement,
+  SettlementCreate,
   Shift,
   ShiftCreate,
 } from '@/data/types';
@@ -50,6 +54,10 @@ export interface DataSource {
   maintenances: MaintenanceRepository;
   expenseTypes: Pick<Repository<ExpenseType, never>, 'list'>;
   expenses: Repository<Expense, ExpenseCreate>;
+  // An expense's split is a set of rows diffed by the data store, exactly like
+  // the junctions below. Settlements are standalone rows (owner pays owner).
+  expenseShares: Repository<ExpenseShare, ExpenseShareCreate>;
+  settlements: Repository<Settlement, SettlementCreate>;
   // Junctions are plain CRUD: replacing an assignment set is a diff of
   // creates/removes done once in the data store, so it works the same against
   // both data sources without bespoke endpoints.

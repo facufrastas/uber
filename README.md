@@ -32,7 +32,8 @@ de 1 h renovado automáticamente con el refresh token de 7 días.
 |---|---|
 | `/` | KPIs (ingresos, gastos, neto, turnos) con delta vs. período anterior + 4 gráficos |
 | `/income` | Turnos con su pago (1 turno = 1 pago; método por defecto: transferencia) |
-| `/expenses` | Todos los gastos; los de mantenimiento aparecen con badge y se editan desde Mantenimientos |
+| `/expenses` | Todos los gastos; los de mantenimiento aparecen con badge y se editan desde Mantenimientos. Cada gasto guarda quién lo pagó y cómo se reparte entre dueños |
+| `/debts` | Saldos entre dueños (quién le debe a quién) y registro de pagos de deuda. Sin filtro de fechas: una deuda no pertenece a un período |
 | `/cars` | Tabs Autos / Choferes; aviso cuando un auto tiene menos de 2 choferes |
 | `/maintenance` | Historial de servicio; crear uno genera su gasto vinculado |
 
@@ -44,7 +45,18 @@ auto + chofer. Viven en la URL, así que un link copiado abre la misma vista.
 `schema.sql` tiene TODO el DDL (tablas y columnas en inglés, espejo 1:1 de los
 tipos del código): FKs con sus cascadas, índices, seed de `expense_types` y
 notas de RLS. Se ejecuta a mano en el SQL Editor de Supabase; FresaStuff-API
-accede con la service key. Cómo está armada la capa de datos y la
+accede con la service key. Para una base que ya existe, los cambios posteriores
+viven en `migrations/` (idempotentes, se corren una vez en el SQL Editor).
+
+### Gastos compartidos y deudas
+
+Un gasto guarda **quién lo pagó** (`expenses.paid_by_owner_id`) y **cómo se
+reparte** (`expense_shares`: una fila por participante con su parte en ARS).
+La parte de quien pagó es su costo, no una deuda: lo que debe alguien es su
+share de un gasto que pagó otro. Los pagos entre dueños (`settlements`) van en
+la dirección opuesta y cancelan el saldo — nunca cuentan como gasto de la flota
+ni entran en los KPIs. Los selectores viven en `src/lib/analytics.ts`
+(`debtEntries`, `debtBalances`, `debtNetByOwner`). Cómo está armada la capa de datos y la
 autenticación: `docs/arquitectura-repositorios.md`.
 
 ## Para leer (docs de aprendizaje)

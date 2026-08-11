@@ -98,9 +98,37 @@ export interface Expense {
   expenseTypeId: string;
   carId: string | null;
   maintenanceId: string | null;
+  // Who put the money in. null = nobody claimed it (legacy rows and expenses
+  // paid from the fleet itself); without a payer the expense generates no debt.
+  paidByOwnerId: string | null;
   amount: number;
   date: string;
   description: string | null;
+  createdAt: string;
+}
+
+// One participant's part of an expense, in ARS (not a percentage: uneven
+// splits are expressible and the debt math is a plain sum — the dialog shows
+// the percentage and rewrites the amounts). No shares at all = not split.
+// The payer's own share is a row too and is NOT a debt: what someone owes is
+// their share of an expense paid by someone else.
+export interface ExpenseShare {
+  id: string;
+  expenseId: string;
+  ownerId: string;
+  amount: number;
+  createdAt: string;
+}
+
+// A repayment between owners ("person 2 gives person 1 the 70k back"). It is
+// NOT an expense: it never reaches the KPIs, it only cancels a balance.
+export interface Settlement {
+  id: string;
+  fromOwnerId: string; // who pays
+  toOwnerId: string; // who gets paid
+  amount: number;
+  date: string;
+  notes: string | null;
   createdAt: string;
 }
 
@@ -114,3 +142,5 @@ export type ShiftCreate = Omit<Shift, 'id' | 'createdAt'>;
 export type PaymentCreate = Omit<Payment, 'id' | 'createdAt'>;
 export type MaintenanceCreate = Omit<Maintenance, 'id' | 'createdAt'>;
 export type ExpenseCreate = Omit<Expense, 'id' | 'createdAt'>;
+export type ExpenseShareCreate = Omit<ExpenseShare, 'id' | 'createdAt'>;
+export type SettlementCreate = Omit<Settlement, 'id' | 'createdAt'>;
