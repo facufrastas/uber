@@ -47,7 +47,8 @@ export function AppLayout() {
           )}
         </div>
       </SidebarInset>
-      <Toaster richColors position="top-right" />
+      {/* bottom-right: top-right sat on top of the page action buttons and ate their clicks */}
+      <Toaster richColors position="bottom-right" duration={2500} />
     </SidebarProvider>
   );
 }
