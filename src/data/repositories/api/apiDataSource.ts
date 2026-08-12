@@ -251,6 +251,7 @@ interface ExpenseRow {
   amount: number | string;
   date: string;
   description: string | null;
+  payed: boolean | null;
   created_at: string;
 }
 
@@ -264,6 +265,7 @@ const expenseFromRow = (r: ExpenseRow): Expense => ({
   amount: Number(r.amount),
   date: r.date,
   description: r.description,
+  payed: r.payed ?? false,
   createdAt: r.created_at,
 });
 
@@ -276,6 +278,7 @@ const expenseToRow = (e: Partial<ExpenseCreate>) =>
     amount: e.amount,
     date: e.date,
     description: e.description,
+    payed: e.payed,
   });
 
 // --- expense shares / settlements ---

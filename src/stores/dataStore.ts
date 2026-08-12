@@ -89,6 +89,9 @@ interface DataState {
   addExpense: (input: ExpenseCreate, shares?: ExpenseShareInput[]) => Promise<void>;
   updateExpense: (id: string, input: Partial<ExpenseCreate>, shares?: ExpenseShareInput[]) => Promise<void>;
   removeExpense: (id: string) => Promise<void>;
+  // The Saldado toggle: the only thing that moves an expense between the
+  // Gastos and Gastos Saldados tables.
+  setExpensePayed: (id: string, payed: boolean) => Promise<void>;
 
   addSettlement: (input: SettlementCreate) => Promise<void>;
   updateSettlement: (id: string, input: Partial<SettlementCreate>) => Promise<void>;
@@ -279,6 +282,10 @@ export const useDataStore = create<DataState>()((set, get) => {
       // the DB cascades the shares away with the expense
       await ds.expenses.remove(id);
       await refresh('expenses', 'expenseShares');
+    },
+    setExpensePayed: async (id, payed) => {
+      await ds.expenses.update(id, { payed });
+      await refresh('expenses');
     },
 
     addSettlement: async (input) => {
