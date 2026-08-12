@@ -53,7 +53,8 @@ viven en `migrations/` (idempotentes, se corren una vez en el SQL Editor).
 Un gasto guarda **quién lo pagó** (`expenses.paid_by_owner_id`) y **cómo se
 reparte** (`expense_shares`: una fila por participante con su parte en ARS).
 La parte de quien pagó es su costo, no una deuda: lo que debe alguien es su
-share de un gasto que pagó otro. Los pagos entre dueños (`settlements`) van en
+share de un gasto que pagó otro. Una parte de 0 es válida (100/0: uno se hace
+cargo de todo y el otro igual queda listado, sin deber nada). Los pagos entre dueños (`settlements`) van en
 la dirección opuesta y cancelan el saldo — nunca cuentan como gasto de la flota
 ni entran en los KPIs. Los selectores viven en `src/lib/analytics.ts`
 (`debtEntries`, `debtBalances`, `debtNetByOwner`). Cómo está armada la capa de datos y la

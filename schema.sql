@@ -225,7 +225,9 @@ create table expense_shares (
   id          uuid primary key default gen_random_uuid(),
   expense_id  uuid not null references expenses (id) on delete cascade,
   owner_id    uuid not null references owners (id) on delete cascade,
-  amount      numeric(12,2) not null check (amount > 0),
+  -- 0 is valid: "this one is on me", recorded explicitly instead of leaving
+  -- the other owner out of the split
+  amount      numeric(12,2) not null check (amount >= 0),
   created_at  timestamptz not null default now(),
   unique (expense_id, owner_id)
 );

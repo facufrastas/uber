@@ -52,8 +52,10 @@ export const splitSchema = z
       return;
     }
 
-    if (split.rows.some((r) => Number.isNaN(r.percentage) || r.percentage <= 0)) {
-      ctx.addIssue({ code: 'custom', message: 'Cada porcentaje debe ser mayor a 0' });
+    // 0 is allowed on purpose: one owner can bear the whole expense and the
+    // other still be listed with nothing to pay
+    if (split.rows.some((r) => Number.isNaN(r.percentage) || r.percentage < 0)) {
+      ctx.addIssue({ code: 'custom', message: 'Cada porcentaje debe ser 0 o mayor' });
 
       return;
     }
@@ -68,18 +70,20 @@ export const splitSchema = z
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
-// Percentages → the ARS amounts that get stored. The last row absorbs the
-// rounding leftover so the shares always add up to the expense exactly
-// (140k split 3 ways: 46666.67 + 46666.67 + 46666.66).
+// Percentages → the ARS amounts that get stored. The last paying row absorbs
+// the rounding leftover so the shares always add up to the expense exactly
+// (140k split 3 ways: 46666.67 + 46666.67 + 46666.66). Rows at 0 are kept as
+// 0-amount shares: the split says who was considered, not only who owes.
 export function splitToShares(split: SplitValue, amount: number): ExpenseShareInput[] {
   if (split.rows.length === 0) return [];
 
   const shares = split.rows.map((row) => ({ ownerId: row.ownerId, amount: round2((amount * row.percentage) / 100) }));
   const leftover = round2(amount - shares.reduce((sum, s) => sum + s.amount, 0));
+  const last = shares.map((s) => s.amount > 0).lastIndexOf(true);
 
-  shares[shares.length - 1].amount = round2(shares[shares.length - 1].amount + leftover);
+  if (last !== -1) shares[last].amount = round2(shares[last].amount + leftover);
 
-  return shares.filter((s) => s.amount > 0);
+  return shares;
 }
 
 // Stored shares → the percentages the dialog shows when editing.

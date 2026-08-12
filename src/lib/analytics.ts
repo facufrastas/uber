@@ -307,8 +307,9 @@ export function debtEntries(data: DebtSlice): DebtEntry[] {
   for (const share of data.expenseShares) {
     const expense = expenseById.get(share.expenseId);
 
-    // no payer = nobody to owe; the payer's own share is a cost, not a debt
-    if (!expense || expense.paidByOwnerId === null || expense.paidByOwnerId === share.ownerId) continue;
+    // no payer = nobody to owe; the payer's own share is a cost, not a debt;
+    // a share of 0 is a participant who owes nothing
+    if (!expense || expense.paidByOwnerId === null || expense.paidByOwnerId === share.ownerId || share.amount <= 0) continue;
 
     entries.push({
       id: share.id,

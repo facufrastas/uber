@@ -61,8 +61,9 @@ export function ExpensesPage() {
                 const car = carById(expense.carId);
                 const isMaintenanceExpense = expense.maintenanceId !== null;
                 const payer = ownerById(expense.paidByOwnerId);
-                // what the OTHERS bear: the payer's own share is not a debt
-                const debtShares = sharesOf(expense.id).filter((s) => s.ownerId !== expense.paidByOwnerId);
+                // what the OTHERS bear: the payer's own share is not a debt,
+                // and a share of 0 is a participant who owes nothing
+                const debtShares = sharesOf(expense.id).filter((s) => s.ownerId !== expense.paidByOwnerId && s.amount > 0);
 
                 return (
                   <TableRow key={expense.id}>

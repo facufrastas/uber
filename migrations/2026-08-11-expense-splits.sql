@@ -20,10 +20,15 @@ create table if not exists expense_shares (
   id          uuid primary key default gen_random_uuid(),
   expense_id  uuid not null references expenses (id) on delete cascade,
   owner_id    uuid not null references owners (id) on delete cascade,
-  amount      numeric(12,2) not null check (amount > 0),
+  amount      numeric(12,2) not null check (amount >= 0),
   created_at  timestamptz not null default now(),
   unique (expense_id, owner_id)
 );
+
+-- A share of 0 is valid ("this one is on me"). Restated outside the CREATE so
+-- a database that already ran the first version of this file gets it too.
+alter table expense_shares drop constraint if exists expense_shares_amount_check;
+alter table expense_shares add  constraint expense_shares_amount_check check (amount >= 0);
 
 create index if not exists expense_shares_expense_id_idx on expense_shares (expense_id);
 create index if not exists expense_shares_owner_id_idx   on expense_shares (owner_id);
