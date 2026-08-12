@@ -200,7 +200,7 @@ create table expenses (
   date              date not null,
   description       text,
   -- flipped by hand from the UI; true moves the row to "Gastos Saldados"
-  payed             boolean not null default false,
+  paid             boolean not null default false,
   created_at        timestamptz not null default now()
 );
 
@@ -208,7 +208,7 @@ create index expenses_date_idx             on expenses (date);
 create index expenses_car_id_idx           on expenses (car_id);
 create index expenses_expense_type_id_idx  on expenses (expense_type_id);
 create index expenses_paid_by_owner_id_idx on expenses (paid_by_owner_id);
-create index expenses_payed_idx            on expenses (payed);
+create index expenses_paid_idx            on expenses (paid);
 
 -- ----------------------------------------------------------------------------
 -- EXPENSE SHARES

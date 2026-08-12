@@ -33,7 +33,7 @@ de 1 h renovado automáticamente con el refresh token de 7 días.
 | `/` | KPIs (ingresos, gastos, neto, turnos) con delta vs. período anterior + 4 gráficos |
 | `/income` | Turnos con su pago (1 turno = 1 pago; método por defecto: transferencia) |
 | `/expenses` | Gastos pendientes; los de mantenimiento aparecen con badge y se editan desde Mantenimientos. Cada gasto guarda quién lo pagó y cómo se reparte entre dueños |
-| `/settled-expenses` | Misma tabla que Gastos, con los que están marcados como saldados (`expenses.payed = true`); el toggle los devuelve a Gastos |
+| `/settled-expenses` | Misma tabla que Gastos, con los que están marcados como saldados (`expenses.paid = true`); el toggle los devuelve a Gastos |
 | `/debts` | Saldos entre dueños (quién le debe a quién) y registro de pagos de deuda. Sin filtro de fechas: una deuda no pertenece a un período |
 | `/cars` | Tabs Autos / Choferes; aviso cuando un auto tiene menos de 2 choferes |
 | `/maintenance` | Historial de servicio; crear uno genera su gasto vinculado |
@@ -57,7 +57,7 @@ La parte de quien pagó es su costo, no una deuda: lo que debe alguien es su
 share de un gasto que pagó otro. Una parte de 0 es válida (100/0: uno se hace
 cargo de todo y el otro igual queda listado, sin deber nada). Los pagos entre dueños (`settlements`) van en
 la dirección opuesta y cancelan el saldo — nunca cuentan como gasto de la flota
-ni entran en los KPIs. Aparte de eso, `expenses.payed` es una marca manual ("ya lo saldé") que sólo
+ni entran en los KPIs. Aparte de eso, `expenses.paid` es una marca manual ("ya lo saldé") que sólo
 decide en qué tabla aparece el gasto: no toca las deudas ni los KPIs, que
 siguen contando todos los gastos del período. Los selectores viven en `src/lib/analytics.ts`
 (`debtEntries`, `debtBalances`, `debtNetByOwner`). Cómo está armada la capa de datos y la

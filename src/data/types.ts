@@ -107,7 +107,7 @@ export interface Expense {
   // Settled by hand from the Gastos table (there is no rule that flips it):
   // true parks the expense in the "Gastos Saldados" section. Independent of
   // the split — an expense can be settled and still have debts pending.
-  payed: boolean;
+  paid: boolean;
   createdAt: string;
 }
 
@@ -145,8 +145,8 @@ export type CarOwnerCreate = Omit<CarOwner, 'id' | 'createdAt'>;
 export type ShiftCreate = Omit<Shift, 'id' | 'createdAt'>;
 export type PaymentCreate = Omit<Payment, 'id' | 'createdAt'>;
 export type MaintenanceCreate = Omit<Maintenance, 'id' | 'createdAt'>;
-// payed is optional on create: a new expense is unsettled (the column
+// paid is optional on create: a new expense is unsettled (the column
 // defaults to false), the flag is only ever sent by the toggle.
-export type ExpenseCreate = Omit<Expense, 'id' | 'createdAt' | 'payed'> & { payed?: boolean };
+export type ExpenseCreate = Omit<Expense, 'id' | 'createdAt' | 'paid'> & { paid?: boolean };
 export type ExpenseShareCreate = Omit<ExpenseShare, 'id' | 'createdAt'>;
 export type SettlementCreate = Omit<Settlement, 'id' | 'createdAt'>;

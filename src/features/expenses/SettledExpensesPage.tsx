@@ -9,13 +9,13 @@ import type { Expense } from '@/data/types';
 import { ExpenseDialog } from '@/features/expenses/ExpenseDialog';
 import { ExpensesTable } from '@/features/expenses/ExpensesTable';
 
-// Same table as Gastos, other side of the `payed` flag: the toggle here sends
+// Same table as Gastos, other side of the `paid` flag: the toggle here sends
 // the expense back to /expenses.
 export function SettledExpensesPage() {
   const { filtered } = useFilteredData();
   const [dialog, setDialog] = useState<{ open: boolean; expense?: Expense }>({ open: false });
 
-  const settledExpenses = useMemo(() => filtered.expenses.filter((e) => e.payed).sort((a, b) => b.date.localeCompare(a.date)), [filtered.expenses]);
+  const settledExpenses = useMemo(() => filtered.expenses.filter((e) => e.paid).sort((a, b) => b.date.localeCompare(a.date)), [filtered.expenses]);
 
   return (
     <>

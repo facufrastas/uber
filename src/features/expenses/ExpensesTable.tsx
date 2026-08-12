@@ -16,7 +16,7 @@ interface ExpensesTableProps {
 }
 
 // The one expenses table, shared by Gastos and Gastos Saldados: the sections
-// differ only in which side of `payed` they list and in what the toggle does.
+// differ only in which side of `paid` they list and in what the toggle does.
 export function ExpensesTable({ expenses, onEdit }: ExpensesTableProps) {
   const location = useLocation();
   const cars = useDataStore((s) => s.cars);
@@ -24,7 +24,7 @@ export function ExpensesTable({ expenses, onEdit }: ExpensesTableProps) {
   const expenseTypes = useDataStore((s) => s.expenseTypes);
   const expenseShares = useDataStore((s) => s.expenseShares);
   const removeExpense = useDataStore((s) => s.removeExpense);
-  const setExpensePayed = useDataStore((s) => s.setExpensePayed);
+  const setExpensePaid = useDataStore((s) => s.setExpensePaid);
 
   const typeById = (id: string) => expenseTypes.find((t) => t.id === id);
   const carById = (id: string | null) => cars.find((c) => c.id === id);
@@ -33,9 +33,17 @@ export function ExpensesTable({ expenses, onEdit }: ExpensesTableProps) {
 
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-  const togglePayed = async (expense: Expense) => {
-    await setExpensePayed(expense.id, !expense.payed);
-    toast.success(expense.payed ? 'Gasto devuelto a Gastos' : 'Gasto saldado');
+  // Toggling is the only action here that is not wrapped by a dialog, so it
+  // reports its own failure: without this a rejected PATCH looked like a
+  // button that does nothing.
+  const togglePaid = async (expense: Expense) => {
+    try {
+      await setExpensePaid(expense.id, !expense.paid);
+      toast.success(expense.paid ? 'Gasto devuelto a Gastos' : 'Gasto saldado');
+    } catch (err) {
+      console.error(err);
+      toast.error('No se pudo actualizar el gasto');
+    }
   };
 
   return (
@@ -100,11 +108,11 @@ export function ExpensesTable({ expenses, onEdit }: ExpensesTableProps) {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      aria-label={expense.payed ? 'Marcar como no saldado' : 'Marcar como saldado'}
-                      title={expense.payed ? 'Marcar como no saldado' : 'Marcar como saldado'}
-                      onClick={() => void togglePayed(expense)}
+                      aria-label={expense.paid ? 'Marcar como no saldado' : 'Marcar como saldado'}
+                      title={expense.paid ? 'Marcar como no saldado' : 'Marcar como saldado'}
+                      onClick={() => void togglePaid(expense)}
                     >
-                      {expense.payed ? <Undo2 /> : <CircleCheck />}
+                      {expense.paid ? <Undo2 /> : <CircleCheck />}
                     </Button>
                     {/* maintenance expenses are edited/deleted from the Mantenimientos section */}
                     {!isMaintenanceExpense && (

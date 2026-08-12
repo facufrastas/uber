@@ -15,7 +15,7 @@ export function ExpensesPage() {
   const [dialog, setDialog] = useState<{ open: boolean; expense?: Expense }>({ open: false });
 
   // settled expenses live in their own section (/settled-expenses)
-  const pendingExpenses = useMemo(() => filtered.expenses.filter((e) => !e.payed).sort((a, b) => b.date.localeCompare(a.date)), [filtered.expenses]);
+  const pendingExpenses = useMemo(() => filtered.expenses.filter((e) => !e.paid).sort((a, b) => b.date.localeCompare(a.date)), [filtered.expenses]);
 
   return (
     <>
